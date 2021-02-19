@@ -1,0 +1,10 @@
+version: '3.5'
+
+services:
+  ind_mongodb:
+    image: mongo
+    container_name: 'ind_mongodb'
+    ports:
+      - "27017:27017"
+    volumes:
+      - "./data/mongodb:/data/db"
