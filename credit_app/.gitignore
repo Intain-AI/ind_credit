@@ -1,0 +1,6 @@
+*.pyc
+mongodb-data/
+static/data/
+__pycache__/
+.vscode/
+__pycache__

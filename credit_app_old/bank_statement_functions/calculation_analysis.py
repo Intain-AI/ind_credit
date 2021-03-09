@@ -9,6 +9,16 @@ import traceback
 # headers_file = project_configs.INTAIN_BANK_STATEMENt_HEADERS_CSV
 
 class StatementAnalyser():
+    '''
+    TODO
+    1. Add logic for KOTAK bank flow
+    2. Add code to pickup data within specific timeframe
+    3. Add as much keywords for other banks and diff type of transactions
+    4. Add remaining formula to the existing ones
+    5. Fetch bank name from statement itself instead of passing it separately
+    6. Test with more samples
+    '''
+
     def __init__(self,headers_path,keywords_path):
         '''
         Initialize the header names and description for various banks
@@ -331,7 +341,7 @@ def get_statement_analysis(csv_file_path,original_bank_name,bank_name,pdf_file_p
 
     calculation_csv = pdf_file_path.split('.')[:-1]
     calculation_csv_path = ".".join(calculation_csv) + '_calculations.xlsx'
-
+    
     key,val,values = [],[],[]
     for name,cal in final_final_result.items():
         name = re.sub('[^A-Za-z]+', ' ', name)
@@ -350,3 +360,9 @@ def get_statement_analysis(csv_file_path,original_bank_name,bank_name,pdf_file_p
     calculation_csv_path = csv_file_path.split('bank_statement_analysis')[-1]
     
     return final_final_result,calculation_csv_path,final_result_list
+
+if __name__ == '__main__':
+    # final_result = {'01. Account Holder': 'C RADHIKA', '02. Account Number': '166010100050598', '03. Statement Start Date': '15/10/2018', '04. Statement End Date': '07/02/2018', '05. Bank Name': 'ANDHRA BANK', '06. Total number of transactions': 77, '07. Minimum balance': 0.0, '08. Maximum balance': 21607.0, '09. Opening Balance': 14678.0, '10. Closing Balance': 19054.0, '11. Number of credit transactions': 20, '12. Number of debit transactions': 57, '13. Total amount credited': 174064.0, '14. Total amount debited': 167728.5, '15. Number of cash deposit transactions': 0, '16. Total amount of cash deposited': 0.0, '17. Number of cash withdrawal transactions': 29, '18. Total amount of cash withdrawed': 138996.0, '19. Number of UPI credit transactions': 2, '20. Total amount credited through UPI': 4700.0, '21. Number of UPI debit transactions': 0, '22. Total amount debited through UPI': 0.0, '23. Number of net banking credit transactions': 5, '24. Total amount credited through net banking': 9700.0, '25. Number of net banking debit transactions': 1, '26. Total amount debited through net banking': 8002.5, '27. Number of Mobile banking debit transactions': 0, '28. Total amount debited through Mobile banking': 0, '29. Number of Mobile banking Credit transactions': 0, '30. Total amount credited through Mobile banking': 0, '31. Number of salary credit transactions': 9, '32. Total amount credited through salary': 149603.0, '33. Number of international credit transactions': 0, '34. Total amount credited through international transactions': 0, '35. Number of international debit transactions': 0, '36. Total amount debited through international transactions': 0, '37. Number of debit transactions through cheque': 0, '38. Total amount debited through cheque': 0, '39. Number of credit transactions through cheque': 0, '40. Total amount credited through cheque': 0, '41. Number of debit transaction through outward cheque': 0, '42. Total amount of debit transaction through outward cheque': 0, '43. Number of of refund transactions': 0, '44. Total amount of refund': 0, '45. Number of bank interest transactions': 0, '46. Total amount of bank interest': 0, '47. Number of debit card transactions': 11, '48. Total amount spent through debit card': 7361.0, '49. Number of auto-debit transactions': 0, '50. Total amount of auto-debit payments': 0, '51. Number of bill payment transactions': 0, '52. Total amount spent for bill payments': 0, '53. Number of bank charge payments': 7, '54. Total amount of bank charge payments': 755.0, '55. Number of auto-debit bounce': 0, '56. Total amount of auto-debit bounce': 0, '57. Number of Demand Draft credit transactions': 0, '58. Total amount of credited by using Demand Draft': 0, '59. Number of Demand Draft Debit transactions': 0, '60. Total amount of Debited by using Demand Draft': 0, '61. Number of investment cashin transactions': 0, '62. Total amount of investment cashin': 0, '63. Number of payment gateway purchase transactions': 0, '64. Total amount spent through payment gateways': 0, '65. Number of merchant outlet transactions': 9, '66. Total amount spent at merchant outlets': 12614.0}
+    
+    final_dict = get_final_dict(final_result)
+    print(final_dict)

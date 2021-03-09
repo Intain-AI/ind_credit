@@ -1,0 +1,12 @@
+*.pyc
+*.pb
+mongodb-data/
+credit_app/static/data/
+__pycache__/
+.vscode/
+__pycache__
+data/mongodb/
+detection/predicted_images/
+save_table_crop_images/
+config/
+ocr_config/

@@ -11,382 +11,183 @@ import config
 import os
 import pandas as pd
 import shutil
+import glob
+import json
+
+from .bank_statement_functions.indone import verify_token,indone_auth
+from .bank_statement_functions.DocIdentifierProcessing import *
 from .bank_statement_functions import credit_db
-from .bank_statement_functions.bank_statement import get_file_name
 from .bank_statement_functions.combining_dataframes import combined_dataframe
 from .bank_statement_functions.calculation_analysis import get_statement_analysis
-
+from .bank_statement_functions.table_reconstruction import get_table_data,analysis 
+from .bank_statement_functions.calculations import json_to_excel,extraction_results,get_desc_keys
 CORS(app)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 app.config.update(
     UPLOADED_PATH=os.path.join(basedir, 'static', 'data', 'input'),
-    UPLOADED_PATH_NEW=os.path.join(basedir, 'static', 'data', 'temp'))
+    UPLOADED_PATH_NEW=os.path.join(basedir, 'static', 'data', 'temp'),
+    JSON_SORT_KEYS = False)
 
-@app.route('/')
-def hello():
-    return "Hello World!"
+######### Initialization of the models used for identifying logical cells and table #########
+docModel_stage2 = DocElementIdentifierV2()
 
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        
-        data = request.get_json()
-        if not data:
-            data = {}
-            new_data = request.form
-            data['token'] = new_data['token']
-        if data is None:
-            print("USER Request has no body!")
-            return jsonify({'message': 'Request has no body!'}), 201
-
-        if 'token' in data:
-            token = data['token']
-        else:
-            print("USER Token is missing!!")
-            return jsonify({'message': 'Token is missing!'}), 201
-
-        try:
-            response = credit_db.get_token(data,'user_registration')
-            if response == -2:
-                print("USER Token is invalid!!")
-                return jsonify({'message': 'Token is invalid'}), 201
-
-            registered_user = response['emailid']
-            secret_key = response['secretkey']
-
-            datanew = jwt.decode(token, secret_key)
-            current_user = datanew['public_id']
-
-            if not current_user == registered_user:
-                return jsonify({'message': 'Not Authorized!'}), 201
-        except:
-            print(traceback.print_exc())
-            
-            return jsonify({'message': 'Token is invalid'}), 201
-
-        return f(current_user, *args, **kwargs)
-    return decorated
-
-########################################################################################################################
-
-@app.route('/credit/user_register', methods=['POST'])
-def register_user():
-    data = request.get_json()
-    print('User register data', data)
-    if data is None:
-        return jsonify({'message': 'Request has no body!'}), 201
-    registration_type = 'user_registration'
-    response = credit_db.register_user(data, registration_type)
-    print('response',response)
-    if response == -1:
-        return jsonify({'message': 'User Details Missing!'}), 201
-    elif response == -2:
-        return jsonify({'message': 'User exists!'}), 201
-    elif response == -4:
-        return jsonify({'message': 'Mailing error!'}), 201
-    return jsonify({'message': 'Registered Successfully!'}), 200
-
-######################################################################################################
-
-@app.route('/credit/user_activate', methods=['GET','POST'])
-def activate_customer():
-    data = request.args
-    response = credit_db.user_activate(data)
-
-    print('User Testing')
-
-    if response == -2:
-        return jsonify({'message': 'Invalid Company'}), 201
-    elif response == -1:
-        return jsonify({'message': 'Invalid User'}), 201
-    elif response == -3:
-        return jsonify({'message': 'Company Already Active'}), 201
-    elif response == -4:
-        return jsonify({'message': 'Admin Already Active'}), 201
-    return jsonify({'message': 'Activated Successfully!'}), 200
-
-########################################################################################################################
-
-@app.route('/credit/user_login', methods=['POST'])
-def login():
-    data = request.get_json()
-    print("login checking", data)
-
-    if data is None:
-        return jsonify({'message': 'Request has no body!'}), 201
-
-    secret_key = data['emailid'] + data['password']
-
-    print("secret_key,", secret_key)
-
-    token = jwt.encode({'public_id': data['emailid'], 'exp': datetime.datetime.now() +
-                        datetime.timedelta(minutes=600)}, secret_key)
-
-    credit_db.update_token(data['emailid'], token.decode('UTF-8'))
-
-    return jsonify({'token': token.decode('UTF-8')}), 200
-
-########################################################################################################################
-
-@app.route('/credit/logout', methods=['POST'])
-@token_required
-def logoutuser(current_user):
-    try:
-        emailid = current_user
-        credit_db.logout_user(emailid)
-    except:
-        return jsonify({'message': 'Not successful!'}), 201
-
-    return jsonify({'message': 'Logged out!'}), 200
-
-#########################################################################################################################
+#########################################################################################################
 
 @app.route('/credit/user_dashboard', methods=['POST'])
-@token_required
-def user_dashboard(current_user):
+def user_dashboard():
     try:
+        # Validating Token
+        response, status,_ = verify_token(request)
+        if status != 1:
+            return jsonify(response), status
         print("Cheking User Dashboard  ")
-        data = request.get_json()
-        response = credit_db.user_dashboard_detail(current_user, data)
+        current_user = response['user_email']
+        dashboard_response = credit_db.userDashboardDetail(current_user)
         
         if not response == -2:
-            print("::::::::::::::: Checked User Dashboard")
-            return jsonify({'result': response}), 200
+            return jsonify({'result': dashboard_response}), 200
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
-
     return jsonify({'result': []}), 200
 
-#########################################################################################################################
 
-@app.route('/credit/delete_job_data', methods=['POST'])
-@token_required
-def delete_job_data(current_user):
-    try:
-        data = request.get_json()
-        job_id = data['job_id']
-        response = credit_db.delete_by_job_id(current_user,job_id)
+###############################################################################################
+
+@app.route("/credit/upload_document", methods=['POST'])
+def credit_upload_document():
+
+    extraction_service_id = "711eb617-dc63-4e8c-93c7-506227c2e650"
+    response, status, token = indone_auth(extraction_service_id, request)
+
+    if status != 1 :
+        return jsonify(response), 401
+    emailid = response['user_email']
+    single_uploads = []
+    try:            
+        credit_db.delete_null_job(emailid)
+        freq = request.files
+        freq = list(freq._iter_hashitems())
+
+        job_details = {}
+        jobid_counter = credit_db.get_jobid(emailid)
+        folder_name = "bank_statement_" + jobid_counter
+        folder_path = os.path.join(app.config['UPLOADED_PATH'], folder_name)
+        print(folder_path)
+        if os.path.isdir(folder_path):
+            shutil.rmtree(folder_path)
+        os.makedirs(folder_path)
         
-        if not response == -2:
-            return jsonify({'result': 'success'}), 200
-    except:
-        print(traceback.print_exc())
-        return jsonify({'message': 'Not successful!'}), 201
-
-    return jsonify({'result': []}), 200
-
-########################################################################################################################
-
-@app.route('/credit/clear_documents', methods=['POST'])
-@token_required
-def clear_document(current_user):
-    try:
-        if request.method == 'POST':           
-            folder_path = os.path.join(app.config['UPLOADED_PATH_NEW'],current_user)
-            if not os.path.isdir(folder_path):
-                os.makedirs(folder_path)
-            uploaded_files = os.listdir(folder_path)
-            if uploaded_files:
-                for f in uploaded_files:
-                    f = os.path.join(folder_path,f)
-                    os.remove(f)
-            return jsonify({'message': 'Cleared directory!'}), 200
-    except:
-        print(traceback.print_exc())
-        return jsonify({'message': 'Not successful!'}), 201
-
-########################################################################################################################
-
-@app.route('/credit/delete_documents', methods=['POST'])
-@token_required
-def delete_document(current_user):
-    try:
-        if request.method == 'POST': 
-            data = request.get_json()
-            file_name = data['file_name']
-            file_path = os.getcwd() + file_name 
-            folder_path = os.path.join(app.config['UPLOADED_PATH_NEW'],current_user)
-            if not os.path.isdir(folder_path):
-                os.makedirs(folder_path)
-            uploaded_files = os.listdir(folder_path)
-            for f in uploaded_files:
-                f = os.path.join(folder_path,f)
-                if f == file_path:
-                    os.remove(f)
-            return jsonify({'message': 'successful!'}), 200
-    except:
-        print(traceback.print_exc())
-        return jsonify({'message': 'Not successful!'}), 201
-        
-########################################################################################################################
-"""
-@app.route('/api/process_documents', methods=['POST'])
-def process_document():
-    if request.method == 'POST':    
-        uploaded_files = request.files.getlist("file")
-        print('>>>>>>>>>> ',uploaded_files,len(uploaded_files))
-        folder_path = os.path.join(app.config['UPLOADED_PATH_NEW'])
-        if not os.path.isdir(folder_path):
-            os.makedirs(folder_path)
-        for file2 in uploaded_files:
-            file_name = file2.filename
-            file2.save(os.path.join(folder_path, file_name))
-            new_file_name1 = os.path.join(folder_path, file_name)
-            new_file_name = new_file_name1.replace("'", "").replace(" ","_")
-            os.rename(new_file_name1, new_file_name)
-            break
-        print('::::::::::::: file name :::::::::::::::::',new_file_name)
+        total_file_size = 0
+        print("UPLOADED FILES : ", end="")
+        for file_ind, (_, files_sent) in enumerate(freq):
+            file_name = files_sent.filename
+            file_name = file_name.encode('ascii', 'ignore').decode()
+            file_name = file_name.replace(" ", "").replace("'", "")
+            print('file_name',file_name, end=", ")
+            files_sent.save(os.path.join(folder_path, file_name))
+            file_stat = os.stat(os.path.join(folder_path, file_name))
+            file_path = folder_path + '/' + file_name
+            total_file_size += file_stat.st_size / 1000
+        print("file_path*********",file_path)
+        date_format = "%Y-%m-%d %H:%M"
+        now_utc = datetime.datetime.now(timezone('UTC'))
+        now_asia = now_utc.astimezone(timezone('Asia/Kolkata'))
+        job_details['upload_date_time'] = now_asia.strftime(date_format)
+        job_details['emailid'] = emailid
+        job_details['job_id'] = jobid_counter
+        job_details['document_name'] = folder_name
+        job_details['folder_path'] = file_path.split('.')[0]+'/'
+        # job_details['file_path'] = file_path
+        job_details['job_size'] = str(total_file_size) + " kB"
+        job_details['job_status'] = 'Processing'
+        job_details['channel'] = 'Web App'
+        job_details['reviewed_by'] = "-"
+        job_details['batch_id'] = 'IN_' + jobid_counter
+        credit_db.insert_job(job_details)
 
         try:
-            file_path = new_file_name
-            x = new_file_name
-            x = x.split('/')[-1]
-            pdf_file_name = x.split('.')[0]
-            
-            img_dir_path = "/home/credit/Credit-Testing/static/images"
-            model_type = "stage_2"
-            ocr_type = "google_ocr"
-            password = ''
-                
-            if model_type=='stage_1':
-                a=docModel_stage1.capture_object(file_path,img_dir_path,ocr_type,password)
-                if a==0:
-                    df = get_table_data(xml_file_name)
-                    df.to_excel(excel_file_path)
-                    return jsonify({'message': "Successfully captured", "excel_path" :excel_file_path }),200
-                else:
-                    return "Not Captured", 415
-            else:              
-                a=docModel_stage2.capture_object(file_path,img_dir_path,ocr_type,password)
-                if a==0:
-                    
-                    xml_folder = img_dir_path + '/'+ pdf_file_name
-                    print(xml_folder)
-                    excel_file_path = get_table_data(xml_folder)
-                    return jsonify({'message': "Successfully captured", "excel_path" :excel_file_path }),200
-                else:
-                    return "Not Captured", 415                
-            
+            start_time = time.time()
+            pdf_file_name = file_name.split('/')[-1].split('.')[0]
+            model_type = "stage_2" ; ocr_type = "google_ocr" ; password = ''  
+            response = docModel_stage2.capture_object(file_path,folder_path,ocr_type,password)
+            # print("RRRRRRRRRR",response)
+            if response:                
+                xml_folder = folder_path + '/'+ pdf_file_name
+                pdf_file_name = xml_folder.split('/')[-1]
+                excel_file_path = xml_folder + '/' + pdf_file_name +'.xlsx'
+
+                json_file_path = xml_folder + '/' + pdf_file_name +'.json'
+                with open ("SSSSSS.json", 'w') as file:
+                    file.write(json.dumps(eval(str(response)), indent=3))
+                extraction_results(response,json_file_path)
+                # excel_file_path,json_file_path = get_table_data(xml_folder,response)
+                excel_file_path = excel_file_path.split('credit_app')[-1]
+                print(">>>>>>>>>>",json_file_path)
+                credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter)
+            print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
+            return jsonify({'message':'Successful!','batch_id': 'IN_' + jobid_counter}), 200
+
         except Exception as e: 
-            print(traceback.print_exc())                                             
-            return "Not Captured", 415
-
-"""
-##############################################################################################################
-@app.route('/credit/upload_documents', methods=['POST'])
-@token_required
-def upload_document(current_user):
-    try:
-        if request.method == 'POST':           
-            uploaded_files = request.files.getlist("file")
-            print('#######################',uploaded_files,len(uploaded_files))
-
-            folder_path = os.path.join(app.config['UPLOADED_PATH_NEW'],current_user)
-            if not os.path.isdir(folder_path):
-                os.makedirs(folder_path)
-            counter = len(os.listdir(folder_path))+1
-            for file2 in uploaded_files:
-                file_name = file2.filename
-                file_name = str(counter) + '_' + file_name
-                file2.save(os.path.join(folder_path, file_name))
-                new_file_name1 = os.path.join(folder_path, file_name)
-                new_file_name = new_file_name1.replace("'", "").replace(" ","_")
-                os.rename(new_file_name1, new_file_name)
-                break
-            new_file_name = new_file_name.split('bank_statement_analysis')[-1]
-            print("##################",new_file_name)
-            return jsonify({'message': 'Successful!','filename' :new_file_name }), 200
-    except:
+            print(traceback.print_exc())       
+            return jsonify({'message': 'Upload Not successful!'}), 401
+    except Exception as e:
         print(traceback.print_exc())
-        return jsonify({'message': 'Not successful!'}), 201
+        return jsonify({'message': 'Not successful!'}), 401
 
-########################################################################################################################
+##############################################################################################
 
-@app.route('/credit/process_documents', methods=['POST'])
-@token_required
-def process_document(emailid):
-
-    temp_folder_path = os.path.join(app.config['UPLOADED_PATH_NEW'],emailid)
-    try:
-        if request.method == 'POST':
-            data = request.form
-            print( 'process_documentsdata',data)
-            applicant_id = data['applicantid']
-
-            ''' Check if entered applicant id is already exists or not'''
-            application_id_resp = credit_db.get_application_id_detail(applicant_id,emailid)
-            if application_id_resp != -2:
-                return jsonify({'message': 'applicant id already exits'}), 201
-
-            jobid_counter = credit_db.get_jobid(emailid)
-            folder_name = "bank_statement_" + str(jobid_counter)
-
-            folder_path = os.path.join(app.config['UPLOADED_PATH'], folder_name)
-            if os.path.isdir(folder_path):
-                shutil.rmtree(folder_path)
-                
-            os.makedirs(folder_path,mode=0o777)
-
-            temp_files = os.listdir(temp_folder_path)
-            for f in temp_files:
-                f = os.path.join(temp_folder_path,f)
-                shutil.move(f, folder_path)
-
-            uploaded_files = os.listdir(folder_path)
-
-            if len(uploaded_files)>1:
-                new_file_name = get_file_name(uploaded_files,folder_path)
-                file = os.stat(os.path.join(folder_path, new_file_name))
-                file_size += file.st_size 
-                pdf_count = 'multiple'
-
-            else:
-                for file2 in uploaded_files:
-                    new_file_name = os.path.join(folder_path, file2)
-                    file = os.stat(os.path.join(folder_path, file2))
-                    new_file_name = new_file_name.replace("'", "")
-                    file_size += file.st_size     
-                    pdf_count = 'single'       
-
-            file_size = 0
-            if uploaded_files:
-                file_size = file_size/1000
-                job_id = "Job_" + str(jobid_counter)
-                
-                credit_db.insert_new_job(emailid, job_id, applicant_id, new_file_name)
-
-                
-                # output_dataframe, csv_path, bank_type, excel_path, transaction_data = combined_dataframe(bank_name, final_output_json, new_file_name)
-                # calculation_response, calculation_csv_path,calculation_result_list = get_statement_analysis(excel_path, bank_name, bank_type, new_file_name, text, word_order)
-                # new_file_name = new_file_name.split('bank_statement_analysis')[-1]
-                # credit_db.get_single_records(emailid, job_id, new_file_name, output_dataframe,calculation_csv_path,
-                #                                 excel_path, transaction_data, calculation_response,calculation_result_list)
-                
-
-            return jsonify({'message': 'Successful!', 'new_file_name': new_file_name, 'calculation_csv_path': calculation_csv_path, 'excel_path': excel_path,'job_id':job_id,'calculation_result_list':calculation_result_list}), 200
-    except:
-        print(traceback.print_exc())
-        return jsonify({'message': 'Bank Name is not listed in processing bank list', 'job_id': job_id}), 201
-
-############################################################################################################
-
-@app.route('/credit/getdetailsbyid', methods=['POST'])
-@token_required
-def userGetDetailsByID(current_user):
+@app.route('/credit/ui_validation', methods=['POST'])
+def ui_validation():
     data = request.get_json()
     try:
-        data = request.get_json()
-        emailid = current_user
-
-        response = credit_db.get_Details_By_ID(emailid, data['job_id'])
-        print('Get Details By ID',response)
-
-        if not response == -2:
-            return jsonify({'result': response}), 200
+        if request.method == 'POST':           
+            response, status,_ = verify_token(request)
+            if status != 1:
+                return jsonify(response), status
+            current_user = response['user_email']
+            job_response = credit_db.ui_validation(current_user,data['batch_id'])
+            desc_list=get_desc_keys()
+            print("*****",desc_list)
+            desc_list.append("Others")
+            print(desc_list)
+            if job_response != -2:      
+                image_folder_path=job_response['folder_path'].split('credit_app')[1]
+                no_images = len(glob.glob(job_response['folder_path']+'/*.jpg'))
+                # print()
+                json_file_path=job_response['json_file_path'].split('credit_app')[1]
+                return jsonify({'message': 'Successful!','description_type':desc_list,'json_file_path':json_file_path,'image_folder_path':image_folder_path,"image_count":no_images }), 200
+            else:
+                return jsonify({'message': 'Not successful!'}), 201
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
 
-    return jsonify({'result': []}), 200
+########################################################################################################
+
+@app.route("/credit/digitize_document", methods=['POST'])
+def credit_digitize_document():
+    data = request.get_json()
+    try:
+        if request.method == 'POST':           
+            response, status,_ = verify_token(request)
+            if status != 1:
+                return jsonify(response), status
+            current_user = response['user_email']
+            
+            batch_id = data['batch_id']
+            folder_path,excel_file_path = credit_db.digitize_document(current_user,batch_id,data['response'])
+            print('excel_file_path',excel_file_path)            
+            df_list_new,textfield_dict = json_to_excel(data['response'])
+            # print('df_list_new',df_list_new)
+            final_excel_path=analysis(excel_file_path,df_list_new,textfield_dict)
+            print("****************** Digitize completed")
+            final_excel_path = final_excel_path.split('credit_app')[1]
+            credit_db.update_calculation_job(excel_file_path,batch_id,final_excel_path)
+            return jsonify({'message': 'Successful!'}) ,200
+            # return jsonify({'message': 'Successful!','final_file_path':final_excel_path}), 200
+
+    except:
+        print(traceback.print_exc())
+        return jsonify({'message': 'Not successful!'}), 201
