@@ -6,10 +6,10 @@ import os,json,traceback
 from .response import textfield_list
 idd=50000
 desc_dict={
-    "Salary":'salary',
+    "Salary":'salary|stipend',
     "Cheque":"by clearing|by cheque|clg",
     "Net Banking":"neft|tpt|rtgs|imps|utr|TO TRANSFER|OFT|TPFT|inb|BRN-RTGS",
-    "Payment Gateway":"abps|ecom|paytm|RAZPRAZORPAYSOFTWARE|billdesk|gpay|othpg",
+    "Payment Gateway":"abps|ecom|paytm|RAZPRAZORPAYSOFTWARE|billdesk|gpay|othpg|razorpay",
     "Auto Debit":"nach|ach|emi|ecs|msi",
     "Bank Charges":"DEBIT CARD ANNUAL FEE|SMS CHARGES|INSPECTION CHGS|GST|DOCUMENTATION CHARGE|PROCESSING FEE|Charges|CHEQUE BOOK ISSUE CHARGES|CHRGS|RTN CHQ CHGS|tbms|AMB CHRG|debit interest captialised",
     "ATM Transaction":"atm|atw|cash|atm csw|nwd|owd|cwdr|ats|eaw|nfs|awb|vat|mat",
@@ -20,9 +20,9 @@ desc_dict={
     "Demand Draft":'dd/cc|dd',
     "UPI":'upi'}
 header_dict = {'Description': ['description','narration','naration','particular','particulars','transaction remarks','remarks','details'],
-'Date':['date','tran date','txn date','txn. date','transaction date','post date'],
-'Debit':['debit','withdrawalamt.','dr','withdrawal','amount dr','withdrawal amt','withdrawal amt.','withdrawals','withdrawal(dr)'],
-'Credit': ['credit','depositamt.','deposit amt.','cr','deposit','amount cr','credit amt','deposits','deposit(cr)'],
+'Date':['date','bate','tran date','txn date','(cid:9)txn date','txn. date','transaction date','post date','post dt'],
+'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','amount dr','withdrawal amt','withdrawal amt.','withdrawals','withdrawal(dr)'],
+'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit(cr)'],
 'Balance':['closingbalance','balance','closing balance','balace','closing bal','balance amt','balance(inr)']}
 
 # IFSC_FILE="/home/credit/ind_credit/project_config/IFSC_Code.xlsx"
@@ -51,7 +51,7 @@ def get_logical_text(data):
         text_list=data['result'][key]['digitized_details']['logical_cells']
         for i in text_list:
             text=text+' '+(i['text'])
-    print("textttt",text)
+    # print("textttt",text)
     text=text.lower().replace('(cid:9)','').replace('\\n',' ')
     text=re.sub('[^a-zA-Z0-9/-]',' ',text)
     text=re.sub('\s+',' ',text)
@@ -70,7 +70,7 @@ def get_logical_text(data):
     i=text.find('account statement')
     if i!=-1:
         month_list=re.findall(month_string,text[i:i+200].lower())
-        print("*******month list",month_list)
+        # print("*******month list",month_list)
         if month_list and dict_bank['ac_open_date']=='NA':
             dates=words[words.index(month_list[0])-1:words.index(month_list[0])+2]
             dict_bank['ac_open_date']=' '.join(dates)
@@ -83,7 +83,7 @@ def get_logical_text(data):
             if i!=-1:
                 acc_no=re.findall('[0-9]{11,17}',text[i:i+200])
                 if acc_no:
-                    print(acc_no[0])  
+                    # print(acc_no[0])  
                     dict_bank['account_number']=acc_no[0]
     return dict_bank
 def guess_date(string):
@@ -110,35 +110,38 @@ def guess_date(string):
     # raise ValueError(string)
 
 def get_correct_date(df):
-    print("$$$$$$$$\n",df)
+    # print("$$$$$$$$\n",df)
     samples = df['Date'].tolist()
     df['Date'] = [guess_date(sample.strip()) for sample in samples]
     df.sort_values(by=['Date'], inplace=True)
-    print(df)
+    # print(df)
     return df
 
-def rename_header(df):
-    # print(df)
-    column_list = list(df.columns)
-    column_list = [s.strip() for s in column_list]
-    new_col_list = []
-    for item in column_list:
-        flag = 0
-        for k,v in header_dict.items():
-            if item.lower() in v:
-                flag = 1 ; new_col_list.append(k)
-                continue
-        if flag == 0:
-            new_col_list.append(item)
-    df.columns = new_col_list
-    return df
+# *****Not being Used****
+# def rename_header(df):
+#     # print(df)
+#     column_list = list(df.columns)
+#     column_list = [s.strip() for s in column_list]
+#     new_col_list = []
+#     for item in column_list:
+#         flag = 0
+#         for k,v in header_dict.items():
+#             if item.lower() in v:
+#                 flag = 1 ; new_col_list.append(k)
+#                 continue
+#         if flag == 0:
+#             new_col_list.append(item)
+#     df.columns = new_col_list
+    # return df
 
 def change_column_name(column_list):
     # print(df)
     column_list = [s.strip() for s in column_list]
     new_col_list = []
     print(column_list)
-    for item in column_list:
+    for item in column_list:        
+        item=re.sub('\s+',' ',item)
+        print(item)
         flag = 0
         for k,v in header_dict.items():
             if item.lower() in v:
@@ -270,7 +273,7 @@ def get_transaction_analysis(df,final_excel_path,textfield_dict):
 
     print('textfield_dict',textfield_dict)
     textfield_dict.update(cal_dict)
-    print(textfield_dict)
+    # print(textfield_dict)
     cal_df = pd.DataFrame(textfield_dict)
     cal_df = cal_df.transpose()
     with pd.ExcelWriter(final_excel_path, engine='openpyxl', mode='a') as writer:  
@@ -290,16 +293,20 @@ def get_blank_coordinates():
     col_dict_coordinates['id']=idd
     return col_dict_coordinates
 
-def add_blank_col(row_list,text,length):
+def add_blank_col(row_list,text,length,index):
     lst = []
     for i in row_list:
         lst.append(int(i['columnNo']))
-    print("new list\n\n",lst,max(lst))
+    # print("new list\n\n",lst,max(lst))
 
-    missing_list = [x for x in range(1,length) if x not in lst] 
+    missing_list = [x for x in range(index,length) if x not in lst] 
     for index in missing_list:
+        # print("Index...",index)
         new_list={}
-        new_list[text]=''
+        if index==0:
+            new_list[text]='Others'
+        else:
+            new_list[text]=''
         new_list['columnNo']=index
         new_list['coordinates']=get_blank_coordinates()
         row_list.insert(new_list['columnNo']-1,new_list)
@@ -358,15 +365,15 @@ def extraction_results(data,json_file_path):
             
             # row_list=[]
             try:
-                new_column=sorted(tables['table_head'][0]['columns'], key = lambda i: i['columnNo'])
-                print("*****\n\n",new_column)
+                new_column=sorted(tables['rows'][0]['cells'], key = lambda i: i['columnNo'])
+                # print("*****\n\n",new_column)
                 lst = []
                 for i in new_column:
                     lst.append(int(i['columnNo']))
-                new_column=add_blank_col(new_column,'text',max(lst))
-                print("*****\n\n",new_column)
-                for columns in new_column:
-                    column_list.append(columns['text'])
+                new_column=add_blank_col(new_column,'text',max(lst),1)
+                # print("*****\n\n",new_column)
+                for cells in new_column:
+                    column_list.append(cells['text'])
 
                 column_list=change_column_name(column_list)
                 column_list.insert(0,'Transaction_Type')
@@ -376,7 +383,7 @@ def extraction_results(data,json_file_path):
                 debit_index=column_list.index('Debit')
                 balance_index=column_list.index('Balance')
                 date_index=column_list.index('Date')
-                print(desc_index)
+                # print(desc_index)
                 # tabledata.append('columns':column_list)
             except:
                 print(traceback.print_exc())
@@ -385,41 +392,45 @@ def extraction_results(data,json_file_path):
                 pass
             row_list1=[]
             # print("***************",desc_index)
-            for index,rows in enumerate(tables['rows']):
-                row_list=[]
-                row_coordinates_list=[]
-                for rows in tables['rows']:
-                    
-                    row_coordinates={}
-                    row_coordinates=add_dictionary(rows,['width','top','left','height','id','rowNo'])
-                    row_coordinates_list.append(row_coordinates)
-                for columns in tables['rows'][index]['columns']:
+            row_coordinates_list=[]
+          
+            for index in range(1,len(tables['rows'])):  
+                row_list=[]              
+                # for rows in tables['rows']:
+                rows=tables['rows'][index]
+                row_coordinates={}
+                row_coordinates=add_dictionary(rows,['width','top','left','height','id','rowNo'])
+                row_coordinates_list.append(row_coordinates)
+                for cells in tables['rows'][index]['cells']:
                     col_dict={}
-                    col_dict_coordinates={}
+                    col_dict_coordinates={} 
                     # print(type(columns['width']),type(columns['top']),type(columns['id']))
-                    col_dict_coordinates=add_dictionary(columns,['width','top','left','height','id'])
-                    col_dict['word']=columns['text']
-                    col_dict['columnNo']= columns['columnNo']
+                    col_dict_coordinates=add_dictionary(cells,['width','top','left','height','id'])
+                    col_dict['word']=cells['text']
+                    col_dict['columnNo']= cells['columnNo']
+                    col_dict['token']= cells['token']
                     col_dict['coordinates']=col_dict_coordinates
 
                     row_list.append(col_dict)
+                col_dict={}
+                # col_dict['word']=transaction_type_description(desc)
+                # print(type(columns['width']),type(columns['top']),type(columns['id']))
                 for i,cols in enumerate(row_list):
                     if cols['columnNo'] == desc_index:
                         desc = cols['word']
-                col_dict={}
-                # print(desc,type(desc))
-                col_dict['word']=transaction_type_description(desc)
-                # print(type(columns['width']),type(columns['top']),type(columns['id']))
-                col_dict_coordinates = get_blank_coordinates()
-                col_dict['columnNo']=0
-                col_dict['coordinates']=col_dict_coordinates
-                if (col_dict['word']=='Others'):
-                    others_error.append(index)
-                row_list.append(col_dict)
+                        col_dict['word']=transaction_type_description(desc)
+                        # print("Description Type", desc,col_dict['word'])
+                        col_dict_coordinates = get_blank_coordinates()
+                        col_dict['columnNo']=0
+                        col_dict['token']=[]
+                        col_dict['coordinates']=col_dict_coordinates
+                        if (col_dict['word']=='Others'):
+                            others_error.append(index)
+                        row_list.append(col_dict)
                 # [x for x in range(lst[0], lst[-1]+1) if x not in lst] 
                 row_list = sorted(row_list, key = lambda i: i['columnNo'])
-                print("roooooow_list\n",row_list)
-                row_list=add_blank_col(row_list,'word',len(column_list))
+                # print("roooooow_list\n",row_list)
+                row_list=add_blank_col(row_list,'word',len(column_list),0)
                 row_list = sorted(row_list, key = lambda i: i['columnNo'])
                 for index,cols in enumerate(row_list):
                     if cols['columnNo']==credit_index:
@@ -440,7 +451,7 @@ def extraction_results(data,json_file_path):
             
             print("others_error",others_error_key)
             
-            tabledata.append({'columns':column_list,'data':row_list1,"row_coordinates":row_coordinates_list})
+            tabledata.append({'columns':column_list,'data':row_list1,"row_coordinates":row_coordinates_list,"column_coordinates":tables['column_cords']})
 
         extraction_results={}
         extraction_results["tabledata"]=tabledata

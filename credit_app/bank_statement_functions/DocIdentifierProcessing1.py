@@ -3,9 +3,8 @@ import os
 import io
 import pandas as pd
 import traceback
-from dicttoxml import dicttoxml
-sys.path.insert(1,'/config/yolov5') # path of yolov5 folder which is inside config folder
 
+sys.path.insert(1,'/config/yolov5') # path of yolov5 folder which is inside config folder
 from doc_identifier import Doc_Element_Identifier
 from doc_identifier.FunctionLibrary import skewcorrect
 from ocr_package import OCR #IND-OCR
@@ -30,7 +29,7 @@ class DocElementIdentifierV1:
     def __init__(self):
         self.model1 = Doc_Element_Identifier.XML_generator_stage1(config_path='./config')
             
-    def capture_object(self, file_path, img_dir_path,ocr_type, password='',resp_format='json'):
+    def capture_object(self, file_path, img_dir_path,ocr_type, password=None):
         all_page_ocr_df, img_list, img_dir_path = self.model1.final_XML_generator(filepath=file_path,password=password,out_dir=img_dir_path)   
         response = {}
         page_wise_data = {}
@@ -44,28 +43,23 @@ class DocElementIdentifierV1:
             if all_page_ocr_df.empty:
                 skewcorrect(img_path)
                 ocr_response = get_ocr_data(ocr_type, img_path)
-                json_data, id=self.model1.xmlgenerator_fornonreadable(img_path,img_dir_path,ocr_response,img_name, id)
+                xml, json_data, id=self.model1.xmlgenerator_fornonreadable(img_path,img_dir_path,ocr_response,img_name, id)
                 page_wise_data[page]= json_data                
                 # a=self.model1.xmlgenerator_fornonreadable(img_path,img_dir_path,response,img_name)
                 # return a
             else:
-                json_data, id = self.model1.xmlgenerator_forreadable(img_path,img_dir_path,all_page_ocr_df,pageno, id) 
+                xml, json_data, id = self.model1.xmlgenerator_forreadable(img_path,img_dir_path,all_page_ocr_df,pageno, id) 
                 page_wise_data[page]= json_data
             id+=1
-            response['result'] = page_wise_data   
-        if resp_format=='xml':
-            return dicttoxml(response,attr_type=False)
-        else:
-            return response                     
+            response['result'] = page_wise_data            
+        return response
 
 class DocElementIdentifierV2:
     def __init__(self):
         self.model2 = Doc_Element_Identifier.XML_generator_stage2(config_path='./config')
             
-    def capture_object(self, file_path, img_dir_path,ocr_type, password='',resp_format='json'):
-        print("password...\n",type(password))
+    def capture_object(self, file_path, img_dir_path,ocr_type, password=None):
         all_page_ocr_df, img_list, img_dir_path = self.model2.final_XML_generator(filepath=file_path,password=password,out_dir=img_dir_path)   
-        print("password...\n",all_page_ocr_df)
         response = {}
         page_wise_data = {}
         filename = os.path.basename(file_path)
@@ -78,19 +72,13 @@ class DocElementIdentifierV2:
             if all_page_ocr_df.empty:
                 skewcorrect(img_path)
                 ocr_response = get_ocr_data(ocr_type, img_path)
-                json_data, id=self.model2.xmlgenerator_fornonreadable(img_path,img_dir_path,ocr_response,img_name, id)
+                xml, json_data, id=self.model2.xmlgenerator_fornonreadable(img_path,img_dir_path,ocr_response,img_name, id)
                 page_wise_data[page]= json_data                
                 # a=self.model2.xmlgenerator_fornonreadable(img_path,img_dir_path,response,img_name)
                 # return a
             else:
-                json_data, id = self.model2.xmlgenerator_forreadable(img_path,img_dir_path,all_page_ocr_df,pageno, id) 
+                xml, json_data, id = self.model2.xmlgenerator_forreadable(img_path,img_dir_path,all_page_ocr_df,pageno, id) 
                 page_wise_data[page]= json_data
             id+=1
-
             response['result'] = page_wise_data 
-        if resp_format=='xml':
-            return dicttoxml(response,attr_type=False)
-        else:
-            return response
-
-
+        return response

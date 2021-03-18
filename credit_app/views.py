@@ -51,7 +51,49 @@ def user_dashboard():
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
     return jsonify({'result': []}), 200
+###########################################################
+@app.route("/credit/docelement_document", methods=['POST'])
+def docelement_upload_document():
 
+    extraction_service_id = "711eb617-dc63-4e8c-93c7-506227c2e650"
+    response, status, token = indone_auth(extraction_service_id, request)
+
+    if status != 1 :
+        return jsonify(response), 401
+    content_type = request.content_type
+    if 'json' in content_type:
+        try:
+            data = request.get_json()
+            file_path = data['file_path']
+            img_dir_path = data['img_dir_path']
+            model_type = "stage_2" ; ocr_type = "google_ocr" ; password = ''
+            if 'resp_format' in data:
+                resp_format=data['resp_format']
+            else:
+                resp_format='json'
+            if 'password' in data:
+                password = data['password']
+            else:
+                password = ''
+            # print("pa")
+            if model_type=='stage_1':
+                response=docModel_stage1.capture_object(file_path,img_dir_path,ocr_type,password,resp_format)
+                # if a==0:
+                #     return "Successfully captured",200
+                # else:
+                #     return "Not Captured", 415
+            else:                
+                response=docModel_stage2.capture_object(file_path,img_dir_path,ocr_type,password,resp_format)
+                # if a==0:
+                #     return "Successfully captured",200
+                # else:
+                #     return "Not Captured", 415 
+            return jsonify(eval(str(response))), 200              
+             
+            
+        except Exception as e: 
+            print(traceback.print_exc())                                             
+            return jsonify({'message': 'Not captured'}), 415
 
 ###############################################################################################
 
@@ -131,7 +173,7 @@ def credit_upload_document():
 
         except Exception as e: 
             print(traceback.print_exc())       
-            return jsonify({'message': 'Upload Not successful!'}), 401
+            return jsonify({'message': 'Upload Not successful!','batch_id': 'IN_' + jobid_counter}), 401
     except Exception as e:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 401
