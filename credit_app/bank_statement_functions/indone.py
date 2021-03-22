@@ -7,9 +7,10 @@ import os
 
 
 BASE_URL = os.getenv("INDONE_URL")
-VERIFY_URL = BASE_URL+'api/credits/verify/' 
+print(BASE_URL)
+VERIFY_URL = str(BASE_URL)+'api/credits/verify/' 
 LOG_URL = BASE_URL+'api/credits/log/'
-VERIFY_URL_ADMIN = BASE_URL+'api/credits/admin_verify/' 
+VERIFY_URL_ADMIN = str(BASE_URL)+'api/credits/admin_verify/' 
 LOG_URL_ADMIN = BASE_URL+'api/credits/admin_log/'
 API_TOKEN_URL = BASE_URL+'api/keys/token/' 
 

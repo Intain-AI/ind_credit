@@ -13,6 +13,9 @@ import pandas as pd
 import shutil
 import glob
 import json
+import requests
+import re
+import numpy as np
 
 from .bank_statement_functions.indone import verify_token,indone_auth
 from .bank_statement_functions.DocIdentifierProcessing import *
@@ -66,7 +69,8 @@ def docelement_upload_document():
             data = request.get_json()
             file_path = data['file_path']
             img_dir_path = data['img_dir_path']
-            model_type = "stage_2" ; ocr_type = "google_ocr" ; password = ''
+            model_type = "stage_2" ; ocr_type = "google_ocr" ; password = b""
+            print(password,type(password))
             if 'resp_format' in data:
                 resp_format=data['resp_format']
             else:
@@ -107,11 +111,12 @@ def credit_upload_document():
         return jsonify(response), 401
     emailid = response['user_email']
     single_uploads = []
-    try:            
+    try:
+        file_path = ""    
+        file_name = "" 
         credit_db.delete_null_job(emailid)
         freq = request.files
         freq = list(freq._iter_hashitems())
-
         job_details = {}
         jobid_counter = credit_db.get_jobid(emailid)
         folder_name = "bank_statement_" + jobid_counter
@@ -127,12 +132,14 @@ def credit_upload_document():
             file_name = files_sent.filename
             file_name = file_name.encode('ascii', 'ignore').decode()
             file_name = file_name.replace(" ", "").replace("'", "")
-            print('file_name',file_name, end=", ")
+            if not file_name:
+                return jsonify({'message': 'No File Found'}), 400
+
             files_sent.save(os.path.join(folder_path, file_name))
             file_stat = os.stat(os.path.join(folder_path, file_name))
             file_path = folder_path + '/' + file_name
             total_file_size += file_stat.st_size / 1000
-        print("file_path*********",file_path)
+
         date_format = "%Y-%m-%d %H:%M"
         now_utc = datetime.datetime.now(timezone('UTC'))
         now_asia = now_utc.astimezone(timezone('Asia/Kolkata'))
@@ -169,11 +176,12 @@ def credit_upload_document():
                 print(">>>>>>>>>>",json_file_path)
                 credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter)
             print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
-            return jsonify({'message':'Successful!','batch_id': 'IN_' + jobid_counter}), 200
+            return jsonify({'message':'Successful!','batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 200
 
         except Exception as e: 
             print(traceback.print_exc())       
-            return jsonify({'message': 'Upload Not successful!','batch_id': 'IN_' + jobid_counter}), 401
+            json_file_path = "NA"
+            return jsonify({'message': 'Upload Not successful!','batch_id': 'IN_' + jobid_counter, "json":json_file_path}), 400
     except Exception as e:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 401
@@ -227,9 +235,88 @@ def credit_digitize_document():
             print("****************** Digitize completed")
             final_excel_path = final_excel_path.split('credit_app')[1]
             credit_db.update_calculation_job(excel_file_path,batch_id,final_excel_path)
-            return jsonify({'message': 'Successful!'}) ,200
-            # return jsonify({'message': 'Successful!','final_file_path':final_excel_path}), 200
+            # return jsonify({'message': 'Successful!'}) ,200
+            return jsonify({'message': 'Successful!','final_file_path':final_excel_path}), 200
 
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
+
+@app.route("/credit/graphs", methods=['POST'])
+def credit_graphs():
+    data = request.get_json()
+    try:
+        if request.method == 'POST':           
+            response, status,_ = verify_token(request)
+            if status != 1:
+                return jsonify(response), status
+            current_user = response['user_email']
+            
+            batch_id = data['batch_id']
+            excel_path=credit_db.get_excel(current_user,batch_id)
+            complete_file = os.getcwd() + "/credit_app" +excel_path
+            print(complete_file)
+            df=pd.read_excel(complete_file,sheet_name="Transaction_data")
+            debit=df[(df['Debit'].notnull()) ]
+            df_debit = debit.filter(['Transaction_Type','Debit'])
+            df_debit['Debit'] = df_debit['Debit'].apply(lambda x:re.sub('[^0-9.]','',x))
+            df_debit['Debit'] = df_debit['Debit'].apply(np.float64)
+            x=df_debit.groupby(['Transaction_Type']).sum()
+            credit=df[(df['Credit'].notnull()) ]
+            df_credit = credit.filter(['Transaction_Type','Credit'])
+            df_credit['Credit'] = df_credit['Credit'].apply(lambda x:re.sub('[^0-9.]','',x))
+            df_credit['Credit'] = df_credit['Credit'].apply(np.float64)
+            y=df_credit.groupby(['Transaction_Type']).sum()
+            print(x,y)
+            return (x.to_dict(),y.to_dict())
+    except:
+        print(traceback.print_exc())
+        return jsonify({'message': 'Not successful!'}), 201
+
+
+@app.route("/credit/e2EProcessing", methods=['POST'])
+def credit_e2EProcessing():
+
+    url_upload = "http://0.0.0.0:5004/credit/upload_document"
+    url_digitize = "http://0.0.0.0:5004/credit/digitize_document"
+
+    auth_headers = request.headers.get('Authorization')
+    file = request.files["file"]
+    fileData = {'file':(file.filename, file.stream, file.content_type, file.headers)}
+    
+    response = requests.post(url_upload, headers={"Authorization":auth_headers}, files=fileData)
+    if response.status_code != 200:
+        return response.json(), response.status_code
+    
+    batch_id = response.json()["batch_id"]
+
+    json_file = response.json()["json"]
+
+    # json_file = "/home/credit/ind_credit/credit_app/static/data/input/bank_statement_161/state_bank_sample/state_bank_sample.json"
+    # batch_id = "IN_161"
+
+    with open(json_file, "r") as filee:
+        data=json.load(filee)
+    
+    data_ = {"batch_id":batch_id, "response":data}
+    response_ = requests.post(url_digitize, headers={"Authorization":auth_headers,'Content-Type':'application/json'}, data=json.dumps(data_))
+
+    if response_.status_code != 200:
+        return response_.json(), response_.status_code
+    
+    file_path = response_.json()["final_file_path"]
+    complete_file = os.getcwd() + "/credit_app" +file_path
+    print(complete_file)
+    try:
+        balance_sheet = pd.read_excel(complete_file, sheet_name = "Salary Calculations")
+        salary = balance_sheet["Balance"].apply(lambda x:re.sub('[^0-9.]','',x)).astype(float).sum()
+    except:
+        salary = 0
+
+    calculation_sheet = pd.read_excel(complete_file, sheet_name = "Calculations")
+    final=dict(calculation_sheet.values)
+    # final = calculation_sheet.to_dict(orient='records')[0]
+    final["Total Salary"] = salary
+
+    return jsonify(final), 200
+

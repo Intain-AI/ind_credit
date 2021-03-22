@@ -31,6 +31,7 @@ class DocElementIdentifierV1:
         self.model1 = Doc_Element_Identifier.XML_generator_stage1(config_path='./config')
             
     def capture_object(self, file_path, img_dir_path,ocr_type, password='',resp_format='json'):
+        password=b""
         all_page_ocr_df, img_list, img_dir_path = self.model1.final_XML_generator(filepath=file_path,password=password,out_dir=img_dir_path)   
         response = {}
         page_wise_data = {}
@@ -64,6 +65,7 @@ class DocElementIdentifierV2:
             
     def capture_object(self, file_path, img_dir_path,ocr_type, password='',resp_format='json'):
         print("password...\n",type(password))
+        password=b""
         all_page_ocr_df, img_list, img_dir_path = self.model2.final_XML_generator(filepath=file_path,password=password,out_dir=img_dir_path)   
         print("password...\n",all_page_ocr_df)
         response = {}

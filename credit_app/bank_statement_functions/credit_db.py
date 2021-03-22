@@ -135,7 +135,34 @@ def digitize_document(request_email,batch_id,json_response):
         return -2
 
 ########################################################################################################################
+def get_excel(request_email,batch_id):
+    try:
 
+        job_response = collection_job.find_one(
+            {
+                'emailid': request_email,
+                'batch_id':batch_id
+            }, {
+                '_id': 0,
+                "job_size" : 0,
+                'document_name':0,
+                'job_id' : 0
+            })
+        
+        if job_response:  
+            mongo_db_client.close()
+            excel_file_path = job_response['final_excel_path']
+            return (excel_file_path)
+        else:
+            mongo_db_client.close()
+            return -2
+
+    except:
+        mongo_db_client.close()
+        return -2
+
+
+################################################################
 def get_jobid(request_email):
     try:
         response = collection_job.count()

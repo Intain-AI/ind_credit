@@ -212,10 +212,12 @@ def monthly_avg_bal(df,excel_file_path):
 
     df_date[["year", "month", "day"]] = df_date["Date"].apply(str).str.split("-", expand=True)
     agg_date = df_date.groupby(['year','month'])['Balance'].mean()
-    
+    # print(agg_date.columns)
     with pd.ExcelWriter(excel_file_path, engine='openpyxl', mode='a') as writer:  
         agg_date.to_excel(writer, sheet_name = 'Monthly Avg Balance')
-    mab = pd.DataFrame(agg_date).mean()
+    # print("agg_date\n",agg_date.columns)
+    mab = agg_date.mean()
+    # print("MAB....",mab)
     return mab
 
 def get_transaction_type(df,excel_file_path):
@@ -270,11 +272,9 @@ def get_transaction_analysis(df,final_excel_path,textfield_dict):
     df_new,total_credited_amount,total_debited_amount = credit_debit(df,final_excel_path)
     cal_dict = {'Monthly Average Balance': mab,'Total Credited Amount': total_credited_amount,
                 'Total Debited Amount': total_debited_amount}
-
     print('textfield_dict',textfield_dict)
     textfield_dict.update(cal_dict)
-    # print(textfield_dict)
-    cal_df = pd.DataFrame(textfield_dict)
+    cal_df = pd.DataFrame(textfield_dict,index=['values'])
     cal_df = cal_df.transpose()
     with pd.ExcelWriter(final_excel_path, engine='openpyxl', mode='a') as writer:  
         cal_df.to_excel(writer, sheet_name = 'Calculations')
@@ -349,6 +349,8 @@ def extraction_results(data,json_file_path):
     dict_bank=get_logical_text(data)
     others_error={}
     print(dict_bank)
+    column_list=[]
+
     for key,value in data['result'].items():
         tabledata=[]
         error_key=[]
@@ -358,13 +360,12 @@ def extraction_results(data,json_file_path):
         for tables in digitized_details['table_cells']:
             others_error=[]
             error=[]
-            column_list=[]
             credit_list=[]
             debit_list=[]
             balance_list=[]
             
             # row_list=[]
-            try:
+            if key == 'Page_1':
                 new_column=sorted(tables['rows'][0]['cells'], key = lambda i: i['columnNo'])
                 # print("*****\n\n",new_column)
                 lst = []
@@ -378,18 +379,16 @@ def extraction_results(data,json_file_path):
                 column_list=change_column_name(column_list)
                 column_list.insert(0,'Transaction_Type')
                 print("Coluuuuumn list",column_list)
-                desc_index=column_list.index('Description')
-                credit_index=column_list.index('Credit')
-                debit_index=column_list.index('Debit')
-                balance_index=column_list.index('Balance')
-                date_index=column_list.index('Date')
+                try:
+                    desc_index=column_list.index('Description')
+                    credit_index=column_list.index('Credit')
+                    debit_index=column_list.index('Debit')
+                    balance_index=column_list.index('Balance')
+                    date_index=column_list.index('Date')
+                except:
+                    print("Headers Not Found\n")
                 # print(desc_index)
                 # tabledata.append('columns':column_list)
-            except:
-                print(traceback.print_exc())
-                desc_index=2
-                column_list=[]
-                pass
             row_list1=[]
             # print("***************",desc_index)
             row_coordinates_list=[]
