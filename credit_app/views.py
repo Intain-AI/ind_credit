@@ -20,10 +20,12 @@ import numpy as np
 from .bank_statement_functions.indone import verify_token,indone_auth
 from .bank_statement_functions.DocIdentifierProcessing import *
 from .bank_statement_functions import credit_db
-from .bank_statement_functions.combining_dataframes import combined_dataframe
-from .bank_statement_functions.calculation_analysis import get_statement_analysis
+# from .bank_statement_functions.combining_dataframes import combined_dataframe
+# from .bank_statement_functions.calculation_analysis import get_statement_analysis
 from .bank_statement_functions.table_reconstruction import get_table_data,analysis 
 from .bank_statement_functions.calculations import json_to_excel,extraction_results,get_desc_keys
+from .bank_statement_functions import transaction_analysis
+
 CORS(app)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -36,6 +38,10 @@ app.config.update(
 docModel_stage2 = DocElementIdentifierV2()
 
 #########################################################################################################
+@app.route('/credit/api_check',methods=['GET'])
+def api_check():
+    print("working")
+    return jsonify({"message":"Successful"}),200
 
 @app.route('/credit/user_dashboard', methods=['POST'])
 def user_dashboard():
@@ -257,22 +263,22 @@ def credit_graphs():
             complete_file = os.getcwd() + "/credit_app" +excel_path
             print(complete_file)
             df=pd.read_excel(complete_file,sheet_name="Transaction_data")
-            debit=df[(df['Debit'].notnull()) ]
-            df_debit = debit.filter(['Transaction_Type','Debit'])
-            df_debit['Debit'] = df_debit['Debit'].apply(lambda x:re.sub('[^0-9.]','',x))
-            df_debit['Debit'] = df_debit['Debit'].apply(np.float64)
-            x=df_debit.groupby(['Transaction_Type']).sum()
-            credit=df[(df['Credit'].notnull()) ]
-            df_credit = credit.filter(['Transaction_Type','Credit'])
-            df_credit['Credit'] = df_credit['Credit'].apply(lambda x:re.sub('[^0-9.]','',x))
-            df_credit['Credit'] = df_credit['Credit'].apply(np.float64)
-            y=df_credit.groupby(['Transaction_Type']).sum()
-            print(x,y)
-            return (x.to_dict(),y.to_dict())
+            credit_sum,credit_count=transaction_analysis.pie_chart(df,"Credit")
+            debit_sum,debit_count=transaction_analysis.pie_chart(df,"Debit")
+            credit_list = [{"name":k, "value":v} for k, v in credit_sum.to_dict()['Credit'].items()] 
+            debit_list = [{"name":k, "value":v} for k, v in debit_sum.to_dict()['Debit'].items()] 
+            debit_count_list = [{"name":k, "value":v} for k, v in debit_count.to_dict()['Debit'].items()] 
+            credit_count_list = [{"name":k, "value":v} for k, v in credit_count.to_dict()['Credit'].items()] 
+
+            calculation_sheet=pd.read_excel(complete_file,sheet_name="Calculations")
+            card_values=dict(calculation_sheet.values)
+            card_list = [{"name":k, "value":v} for k, v in card_values.items()] 
+
+            print(credit_sum,credit_count,debit_sum,debit_count)
+            return jsonify({'Credit':credit_list,'Debit':debit_list,'Cards':card_list,'Transactions':[{"Debit":debit_count_list,"Credit":credit_count_list}]}), 200
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
-
 
 @app.route("/credit/e2EProcessing", methods=['POST'])
 def credit_e2EProcessing():

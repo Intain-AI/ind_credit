@@ -5,7 +5,8 @@ import os,json,re
 import traceback
 import numpy as np
 
-from .calculations import get_transaction_analysis,extraction_results
+from .calculations import extraction_results
+from .transaction_analysis import get_transaction_analysis
 def read_xml(xml_file):
     tree = ET.parse(xml_file)
     root = tree.getroot()

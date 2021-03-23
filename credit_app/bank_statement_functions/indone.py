@@ -5,7 +5,7 @@ import jwt
 import traceback
 import os
 
-
+INDONE_URL="https://one.in-d.ai"
 BASE_URL = os.getenv("INDONE_URL")
 print(BASE_URL)
 VERIFY_URL = str(BASE_URL)+'api/credits/verify/' 
