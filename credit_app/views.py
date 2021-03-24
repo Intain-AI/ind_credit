@@ -53,7 +53,9 @@ def user_dashboard():
         print("Cheking User Dashboard  ")
         current_user = response['user_email']
         dashboard_response = credit_db.userDashboardDetail(current_user)
-        
+        dashboard_response=sorted(dashboard_response, key = lambda i: i['upload_date_time'],reverse=True)
+
+
         if not response == -2:
             return jsonify({'result': dashboard_response}), 200
     except:
