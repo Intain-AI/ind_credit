@@ -176,16 +176,26 @@ def credit_upload_document():
                 excel_file_path = xml_folder + '/' + pdf_file_name +'.xlsx'
 
                 json_file_path = xml_folder + '/' + pdf_file_name +'.json'
-                with open ("SSSSSS.json", 'w') as file:
-                    file.write(json.dumps(eval(str(response)), indent=3))
-                extraction_results(response,json_file_path)
-                # excel_file_path,json_file_path = get_table_data(xml_folder,response)
+                # with open ("SSSSSS.json", 'w') as file:
+                    # file.write(json.dumps(eval(str(response)), indent=3))
                 excel_file_path = excel_file_path.split('credit_app')[-1]
-                print(">>>>>>>>>>",json_file_path)
-                credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter)
-            print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
-            return jsonify({'message':'Successful!','batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 200
-
+                try:
+                    result_response=extraction_results(response,json_file_path)
+                    if result_response!= -2:    
+                        # print(">>>>>>>>>>",json_file_path)
+                        credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"To be Reviewed")
+                        print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
+                        return jsonify({'message':'Successful!','batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 200
+                    else:
+                        credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Failed")
+                        print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
+                        return jsonify({'message':'Not Successful!','batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 400
+                except Exception as e: 
+                    print(traceback.print_exc())       
+                    json_file_path = "NA"
+                    return jsonify({'message': 'Upload Not successful!','batch_id': 'IN_' + jobid_counter, "json":json_file_path}), 400
+            else:
+                return jsonify({'message': 'Upload Not successful!','batch_id': 'IN_' + jobid_counter}), 400
         except Exception as e: 
             print(traceback.print_exc())       
             json_file_path = "NA"
