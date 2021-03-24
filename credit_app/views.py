@@ -211,7 +211,7 @@ def ui_validation():
             if job_response != -2:      
                 image_folder_path=job_response['folder_path'].split('credit_app')[1]
                 no_images = len(glob.glob(job_response['folder_path']+'/*.jpg'))
-                # print()
+                print(job_response)
                 json_file_path=job_response['json_file_path'].split('credit_app')[1]
                 return jsonify({'message': 'Successful!','description_type':desc_list,'json_file_path':json_file_path,'image_folder_path':image_folder_path,"image_count":no_images }), 200
             else:
@@ -260,6 +260,7 @@ def credit_graphs():
             
             batch_id = data['batch_id']
             excel_path=credit_db.get_excel(current_user,batch_id)
+            print(excel_path)
             complete_file = os.getcwd() + "/credit_app" +excel_path
             print(complete_file)
             df=pd.read_excel(complete_file,sheet_name="Transaction_data")

@@ -405,7 +405,7 @@ def json_to_excel(response):
         
             df.reset_index(drop=True,inplace=True)
             df.columns=column_list 
-            df.to_excel('SSSSSSS.xlsx')
+            # df.to_excel('SSSSSSS.xlsx')
             def trim(x):
                 if x.dtype == object: x = x.str.strip().replace('\s+', ' ',regex=True)
                 return(x)
