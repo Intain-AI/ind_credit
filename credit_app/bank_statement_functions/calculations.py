@@ -122,6 +122,7 @@ def change_column_name(column_list):
     print(column_list)
     for item in column_list:        
         item=re.sub('\s+',' ',item)
+        item=re.sub('[_]','',item)
         print(item)
         flag = 0
         for k,v in header_dict.items():
@@ -220,25 +221,36 @@ def json_file_to_excel(json_file_path):
         data=json.load(json_file)
     df_list_new,textfield_dict = json_to_excel(data)
     final_df = pd.concat(df_list_new,ignore_index=True)
-    final_df.to_excel("Excel.xlsx",header = True,index = False)
+    # final_df.to_excel("Excel.xlsx",header = True,index = False)
 
 
-def balance_column_check(credit_list,debit_list,balance_list):
-    error=[]
-    credit_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in credit_list]
-    debit_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in debit_list]
-    balance_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in balance_list]
-    
-    for i in range(1,len(balance_list)):
-        if balance_list[i-1]<balance_list[i]:
-            if abs(credit_list[i]-(balance_list[i]-balance_list[i-1]))>0.1:
-                print("Crediiiit",i)
-                error.append(i)
-        elif balance_list[i]<balance_list[i-1]:
-            if abs(debit_list[i]-(balance_list[i-1]-balance_list[i]))>0.1:
-                print("Debiittt",i)
-                error.append(i)
-    return(error)
+def balance_column_check(credit_list,debit_list,balance_list,error):
+    error_balance_rows=[]
+    try:
+        credit_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in credit_list]
+        debit_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in debit_list]
+        balance_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in balance_list]
+        print("length C D B",len(credit_list),len(debit_list),len(balance_list))
+        if len(credit_list)!=len(debit_list) and len(credit_list)!=len(balance_list) and len(debit_list)!=len(balance_list):
+            print("Length Match Error\n")
+            error['reconcilation']=1
+        else:
+            print("checking balance")
+            for i in range(1,len(balance_list)):
+                if balance_list[i-1]<balance_list[i]:
+                    if abs(credit_list[i]-(balance_list[i]-balance_list[i-1]))>0.1:
+                        print("Crediiiit",i)
+                        error_balance_rows.append(i)
+                elif balance_list[i]<balance_list[i-1]:
+                    if abs(debit_list[i]-(balance_list[i-1]-balance_list[i]))>0.1:
+                        print("Debiittt",i)
+                        error_balance_rows.append(i)
+        return (error,error_balance_rows)
+
+    except:
+        print("except balance")
+        error['reconcilation']=1
+        return (error,error_balance_rows)
 
 def add_dictionary(value_dict,value_list):
     new_dict={}
@@ -252,167 +264,178 @@ def validate_column_header(column_list,error_header):
         desc_index=column_list.index('Description')
         column_index['Description']=desc_index
     except:
-        error_header['Description']=0
+        error_header['Description']=1
     try:                    
         credit_index=column_list.index('Credit')
         column_index['Credit']=credit_index
     except:
-        error_header['Credit']=0
+        error_header['Credit']=1
     try:
         debit_index=column_list.index('Debit')
         column_index['Debit']=debit_index
     except:
-        error_header['Debit']=0
+        error_header['Debit']=1
     try:
         balance_index=column_list.index('Balance')
         column_index['Balance']=balance_index
     except:
-        error_header['Balance']=0
+        error_header['Balance']=1
     try:
         date_index=column_list.index('Date')
         column_index['Date']=date_index
     except:
-        error_header['Date']=0
+        error_header['Date']=1
     return column_index
 
 
 def extraction_results(data,json_file_path):
-    # with open(input_json, "r") as json_file:
-    #     data=json.load(json_file)
-    dict_bank=get_logical_text(data)
-    others_error={}
-    print(dict_bank)
-    column_list=[]
-    error_header={'Description':1,'Credit':1,'Debit':1,'Balance':1,'Date':1}
-    for key,value in data['result'].items():
-        error={'header':0,'balance':0,'date':0,'type':0}
-        tabledata=[]
-        error_key=[]
-        others_error_key=[]
-        digitized_details=data['result'][key]['digitized_details']
-        #     print(data['result'][key])
-        for tables in digitized_details['table_cells']:
-            others_error=[]
-            credit_list=[]
-            debit_list=[]
-            balance_list=[]
-            
-            # row_list=[]
-            if key == 'Page_1':
-                new_column=sorted(tables['rows'][0]['cells'], key = lambda i: i['columnNo'])
-                # print("*****\n\n",new_column)
-                lst = []
-                for i in new_column:
-                    lst.append(int(i['columnNo']))
-                new_column=add_blank_col(new_column,'text',max(lst),1)
-                # print("*****\n\n",new_column)
-                for cells in new_column:
-                    column_list.append(cells['text'])
+    try:
+        with open (json_file_path, 'w') as file:
+            file.write(json.dumps(eval(str(data)), indent=3))
+        dict_bank=get_logical_text(data)
+        others_error={}
+        print(dict_bank)
+        column_list=[]
+        error_header={'Description':0,'Credit':0,'Debit':0,'Balance':0,'Date':0}
+        for key,value in data['result'].items():
+            tabledata=[]
+            error_key=[]
+            error_others_key=[]
+            error_balance_key=[]
+            digitized_details=data['result'][key]['digitized_details']
+            #     print(data['result'][key])
+            for tables in digitized_details['table_cells']:
+                error={'header':0,'balance':0,'date':0,'type':0,'reconcilation':0}
+                others_error=[]
+                credit_list=[]
+                debit_list=[]
+                balance_list=[]
+                
+                # row_list=[]
+                if key == 'Page_1':
+                    new_column=sorted(tables['rows'][0]['cells'], key = lambda i: i['columnNo'])
+                    # print("*****\n\n",new_column)
+                    lst = []
+                    for i in new_column:
+                        lst.append(int(i['columnNo']))
+                    new_column=add_blank_col(new_column,'text',max(lst),1)
+                    # print("*****\n\n",new_column)
+                    for cells in new_column:
+                        column_list.append(cells['text'])
 
-                column_list=change_column_name(column_list)
-                column_list.insert(0,'Transaction_Type')
-                print("Coluuuuumn list",column_list)
-                column_index=validate_column_header(column_list,error_header)
-                print(column_index)
-                if 0 in column_index.values():
-                    error['header']=1
-                    
-                # print(desc_index)
-                # tabledata.append('columns':column_list)
-            row_list1=[]
-            # print("***************",desc_index)
-            row_coordinates_list=[]
-          
-            for index in range(1,len(tables['rows'])):  
-                row_list=[]              
-                # for rows in tables['rows']:
-                rows=tables['rows'][index]
-                row_coordinates={}
-                row_coordinates=add_dictionary(rows,['width','top','left','height','id','rowNo'])
-                row_coordinates_list.append(row_coordinates)
-                for cells in tables['rows'][index]['cells']:
+                    column_list=change_column_name(column_list)
+                    column_list.insert(0,'Transaction_Type')
+                    print("Coluuuuumn list",column_list)
+                    column_index=validate_column_header(column_list,error_header)
+                    print(column_index)
+                    if 0 in column_index.values():
+                        error['header']=1
+                        
+                    # print(desc_index)
+                    # tabledata.append('columns':column_list)
+                row_list1=[]
+                # print("***************",desc_index)
+                row_coordinates_list=[]
+            
+                for index in range(1,len(tables['rows'])):  
+                    row_list=[]              
+                    # for rows in tables['rows']:
+                    rows=tables['rows'][index]
+                    row_coordinates={}
+                    row_coordinates=add_dictionary(rows,['width','top','left','height','id','rowNo'])
+                    row_coordinates_list.append(row_coordinates)
+                    for cells in tables['rows'][index]['cells']:
+                        col_dict={}
+                        col_dict_coordinates={} 
+                        # print(type(columns['width']),type(columns['top']),type(columns['id']))
+                        col_dict_coordinates=add_dictionary(cells,['width','top','left','height','id'])
+                        col_dict['word']=cells['text']
+                        col_dict['columnNo']= cells['columnNo']
+                        col_dict['token']= cells['token']
+                        col_dict['coordinates']=col_dict_coordinates
+
+                        row_list.append(col_dict)
                     col_dict={}
-                    col_dict_coordinates={} 
+                    # col_dict['word']=transaction_type_description(desc)
                     # print(type(columns['width']),type(columns['top']),type(columns['id']))
-                    col_dict_coordinates=add_dictionary(cells,['width','top','left','height','id'])
-                    col_dict['word']=cells['text']
-                    col_dict['columnNo']= cells['columnNo']
-                    col_dict['token']= cells['token']
-                    col_dict['coordinates']=col_dict_coordinates
+                    if column_index['Description']!=0:
+                        for i,cols in enumerate(row_list):
+                            if cols['columnNo'] == column_index['Description']:
+                                desc = cols['word']
+                                col_dict['word']=transaction_type_description(desc)
+                                # print("Description Type", desc,col_dict['word'])
+                                col_dict_coordinates = get_blank_coordinates()
+                                col_dict['columnNo']=0
+                                col_dict['token']=[]
+                                col_dict['coordinates']=col_dict_coordinates
+                                if (col_dict['word']=='Others'):
+                                    error['type']=1
+                                    others_error.append(index)
+                                row_list.append(col_dict)
+                    # [x for x in range(lst[0], lst[-1]+1) if x not in lst] 
+                    row_list = sorted(row_list, key = lambda i: i['columnNo'])
+                    # print("roooooow_list\n",row_list)
+                    row_list=add_blank_col(row_list,'word',len(column_list),0)
+                    row_list = sorted(row_list, key = lambda i: i['columnNo'])
+                    for index,cols in enumerate(row_list):
+                        if column_index['Credit']!=0 and column_index['Debit']!=0 and column_index['Balance']!=0:  
+                            if cols['columnNo']==column_index['Credit']:
+                                credit_list.append(cols['word'])
+                            if cols['columnNo']==column_index['Debit']:
+                                debit_list.append(cols['word'])
+                            if cols['columnNo']==column_index['Balance']:
+                                balance_list.append(cols['word'])
+                        if column_index['Date']!=0:
+                            if cols['columnNo']==column_index['Date']:
+                                cols['word']=preprocess_date(cols['word'])
 
-                    row_list.append(col_dict)
-                col_dict={}
-                # col_dict['word']=transaction_type_description(desc)
-                # print(type(columns['width']),type(columns['top']),type(columns['id']))
-                if column_index['Description']!=0:
-                    for i,cols in enumerate(row_list):
-                        if cols['columnNo'] == column_index['Description']:
-                            desc = cols['word']
-                            col_dict['word']=transaction_type_description(desc)
-                            # print("Description Type", desc,col_dict['word'])
-                            col_dict_coordinates = get_blank_coordinates()
-                            col_dict['columnNo']=0
-                            col_dict['token']=[]
-                            col_dict['coordinates']=col_dict_coordinates
-                            if (col_dict['word']=='Others'):
-                                error['type']=1
-                                others_error.append(index)
-                            row_list.append(col_dict)
-                # [x for x in range(lst[0], lst[-1]+1) if x not in lst] 
-                row_list = sorted(row_list, key = lambda i: i['columnNo'])
-                # print("roooooow_list\n",row_list)
-                row_list=add_blank_col(row_list,'word',len(column_list),0)
-                row_list = sorted(row_list, key = lambda i: i['columnNo'])
-                for index,cols in enumerate(row_list):
-                    if column_index['Credit']!=0 and column_index['Debit']!=0 and column_index['Balance']!=0:  
-                        if cols['columnNo']==column_index['Credit']:
-                            credit_list.append(cols['word'])
-                        if cols['columnNo']==column_index['Debit']:
-                            debit_list.append(cols['word'])
-                        if cols['columnNo']==column_index['Balance']:
-                            balance_list.append(cols['word'])
-                    if column_index['Date']!=0:
-                        if cols['columnNo']==column_index['Date']:
-                            cols['word']=preprocess_date(cols['word'])
+                    row_list1.append(row_list)
+                if len(credit_list)!=0 and len(debit_list)!=0 and len(balance_list)!=0: 
+                    print(credit_list,debit_list,balance_list)
+                    error,balance_error=balance_column_check(credit_list,debit_list,balance_list,error)
+                    print("errrrroorrrr",balance_error)
+                    if len(balance_error)!=0:
+                        error['balance']=1
+                    if error['reconcilation']==1:
+                        error['balance']=1
+                    error_balance_key.append(balance_error)
+                error_others_key.append(others_error)
+                
+                error_key.append(error)
+                # error_key.append(error)
+                
+                
+                tabledata.append({'columns':column_list,'data':row_list1,"row_coordinates":row_coordinates_list,"column_coordinates":tables['column_cords']})
 
-                row_list1.append(row_list)
-            if len(credit_list)!=0 and len(debit_list)!=0 and len(balance_list)!=0: 
-                print(credit_list,debit_list,balance_list)
-                error_balance=balance_column_check(credit_list,debit_list,balance_list)
-                print("errrrroorrrr",error_balance)
-                if len(error_balance)!=0:
-                    error['balance']=1
-            others_error_key.append(others_error)
-            # error_key.append(error)
-            
-            print("others_error",others_error_key)
-            
-            tabledata.append({'columns':column_list,'data':row_list1,"row_coordinates":row_coordinates_list,"column_coordinates":tables['column_cords']})
+            extraction_results={}
+            extraction_results["tabledata"]=tabledata
+            if key == 'Page_1':
+                textfield = {}
+                for attr in textfield_list:
+                    attr['value']=dict_bank[attr['varname']]            
+                textfield["textfield"] = textfield_list
+                fields = []
+                fields.append(textfield)
+            else:
+                textfield = {}
+                textfield["textfield"] = []
+                fields = []
+                fields.append(textfield)
+            print("error",error)
+            print("error header",error_header)
+            extraction_results["fields"]=fields
+            data['result'][key]['extraction_results']=extraction_results
+            data['result'][key]['error']={'header':error_header,'error':error_key,'others':error_others_key,'balance':error_balance_key}
+            print(data['result'][key]['error'])
+            #data['result'][key]['others_error']=others_error_key
+            return 1
+    except:
+        print(traceback.print_exc())
+        return -2
 
-        extraction_results={}
-        extraction_results["tabledata"]=tabledata
-        if key == 'Page_1':
-            textfield = {}
-            for attr in textfield_list:
-                attr['value']=dict_bank[attr['varname']]            
-            textfield["textfield"] = textfield_list
-            fields = []
-            fields.append(textfield)
-        else:
-            textfield = {}
-            textfield["textfield"] = []
-            fields = []
-            fields.append(textfield)
-        print("error",error)
-        print("error header",error_header)
-        extraction_results["fields"]=fields
-        data['result'][key]['extraction_results']=extraction_results
-        data['result'][key]['error']=error_key
-        data['result'][key]['others_error']=others_error_key
-        
-    with open (json_file_path, 'w') as file:
-        file.write(json.dumps(eval(str(data)), indent=3))
-    json_file_to_excel(json_file_path)
+    # with open (json_file_path, 'w') as file:
+    #     file.write(json.dumps(eval(str(data)), indent=3))
+    # json_file_to_excel(json_file_path)
 
 def json_to_excel(response):
     data = response.copy()

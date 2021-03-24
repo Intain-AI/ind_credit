@@ -195,9 +195,9 @@ def insert_new_job(emailid, job_id, applicant_id, new_file_name):
         return -2
 
 ########################################################################################################################
-def update_job_details(excel_file_path,json_file_path,job_id):
+def update_job_details(excel_file_path,json_file_path,job_id,message):
     try:
-        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status': "To be Reviewed",'excel_file_path':excel_file_path,'json_file_path':json_file_path}})
+        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status':message,'excel_file_path':excel_file_path,'json_file_path':json_file_path}})
         mongo_db_client.close()
         return 
     except:
