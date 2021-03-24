@@ -13,7 +13,7 @@ def output(word,tag):
    return(result)
 def predict_input(sentences):
     X_test=[Features.sent_to_features(s,0) for s in sentences]
-    with open("CRF_classifier.clf", 'rb') as clf:
+    with open("/home/credit/ind_credit/Named_Entity_Recognition/CRF_Classifier.clf", 'rb') as clf:
         crf_classifier = pickle.load(clf)
     prediction=crf_classifier.predict(X_test)
     tag=[]
@@ -26,25 +26,26 @@ def predict_input(sentences):
     return(word,tag)
 
 def main():
-   f = open('E-HDFC_17.json',) 
-   data = json.load(f) 
-   for value in data['result'].items():
+    f = open('/home/credit/ind_credit/credit_app/static/data/input/bank_statement_232/E-HDFC_1/E-HDFC_1.json',) 
+    data = json.load(f) 
+    for value in data['result'].items():
         text_list=data['result']['Page_1']['digitized_details']['logical_cells']
-   sentences=[]
-   for i in range(len(text_list)):
+    sentences=[]
+    for i in range(len(text_list)):
         sentences.append(text_list[i]["token"])
-   sent=[]
-   for i in range(len(sentences)):
+    sent=[]
+    for i in range(len(sentences)):
         tokens=[]
         for j in range(len(sentences[i])):
             tokens.append(sentences[i][j]['text'])
         sent.append(tokens)
+    print(sent)
 
 
   
-   word,tag=predict_input(sent)
-   result=output(word,tag)
-   print(result)
+    word,tag=predict_input(sent)
+    result=output(word,tag)
+    print(result)
    
     
 if __name__=="__main__":
