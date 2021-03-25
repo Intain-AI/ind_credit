@@ -23,7 +23,7 @@ from .bank_statement_functions import credit_db
 # from .bank_statement_functions.combining_dataframes import combined_dataframe
 # from .bank_statement_functions.calculation_analysis import get_statement_analysis
 from .bank_statement_functions.table_reconstruction import get_table_data,analysis 
-from .bank_statement_functions.calculations import json_to_excel,extraction_results,get_desc_keys
+from .bank_statement_functions.calculations import json_to_excel,extraction_results,get_desc_keys,straight_through
 from .bank_statement_functions import transaction_analysis
 
 CORS(app)
@@ -33,6 +33,8 @@ app.config.update(
     UPLOADED_PATH=os.path.join(basedir, 'static', 'data', 'input'),
     UPLOADED_PATH_NEW=os.path.join(basedir, 'static', 'data', 'temp'),
     JSON_SORT_KEYS = False)
+url_upload = "http://0.0.0.0:5004/credit/upload_document"
+url_digitize = "http://0.0.0.0:5004/credit/digitize_document"
 
 ######### Initialization of the models used for identifying logical cells and table #########
 docModel_stage2 = DocElementIdentifierV2()
@@ -181,9 +183,20 @@ def credit_upload_document():
                 excel_file_path = excel_file_path.split('credit_app')[-1]
                 try:
                     result_response=extraction_results(response,json_file_path)
-                    if result_response!= -2:    
+                    credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"To be Reviewed")
+                    if result_response!= -2:
+                        print(result_response)    
+                        straight_response=straight_through(result_response)
+                        if straight_response==1:
+                            with open(json_file_path, "r") as filee:
+                                data=json.load(filee)
+                            data_ = {"batch_id":job_details['batch_id'], "response":data}
+                            auth_headers = request.headers.get('Authorization')
+                            response_ = requests.post(url_digitize, headers={"Authorization":auth_headers,'Content-Type':'application/json'}, data=json.dumps(data_))
+                            if response_.status_code != 200:
+                                return response_.json(), response_.status_code
+
                         # print(">>>>>>>>>>",json_file_path)
-                        credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"To be Reviewed")
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
                         return jsonify({'message':'Successful!','batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 200
                     else:
@@ -295,8 +308,6 @@ def credit_graphs():
 @app.route("/credit/e2EProcessing", methods=['POST'])
 def credit_e2EProcessing():
 
-    url_upload = "http://0.0.0.0:5004/credit/upload_document"
-    url_digitize = "http://0.0.0.0:5004/credit/digitize_document"
 
     auth_headers = request.headers.get('Authorization')
     file = request.files["file"]
@@ -309,9 +320,6 @@ def credit_e2EProcessing():
     batch_id = response.json()["batch_id"]
 
     json_file = response.json()["json"]
-
-    # json_file = "/home/credit/ind_credit/credit_app/static/data/input/bank_statement_161/state_bank_sample/state_bank_sample.json"
-    # batch_id = "IN_161"
 
     with open(json_file, "r") as filee:
         data=json.load(filee)
