@@ -180,9 +180,16 @@ def transaction_type_description(description):
     return(transaction_ref)
 
 
-
-
-
+def straight_through(result):
+    try:
+        for page_list in result:
+            for table_list in page_list: 
+                print(table_list)
+                if table_list['header']==1 or table_list['balance']==1 or table_list['date']==1 or table_list['reconcilation']==1:
+                    return 0
+        return 1
+    except:
+        return 0
     # get_transaction_type(df,excel_file_path)
 
 
@@ -296,6 +303,7 @@ def extraction_results(data,json_file_path):
         others_error={}
         print(dict_bank)
         column_list=[]
+        error_whole=[]
         error_header={'Description':0,'Credit':0,'Debit':0,'Balance':0,'Date':0}
         for key,value in data['result'].items():
             tabledata=[]
@@ -421,17 +429,19 @@ def extraction_results(data,json_file_path):
                 textfield["textfield"] = []
                 fields = []
                 fields.append(textfield)
+            error_whole.append(error_key)
             print("error",error)
             print("error header",error_header)
             extraction_results["fields"]=fields
             data['result'][key]['extraction_results']=extraction_results
-            data['result'][key]['error']={'header':error_header,'error':error_key,'others':error_others_key,'balance':error_balance_key}
+            data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key}}
             print(data['result'][key]['error'])
         with open (json_file_path, 'w') as file:
             file.write(json.dumps(eval(str(data)), indent=3))
         json_file_to_excel(json_file_path)
                 #data['result'][key]['others_error']=others_error_key
-        return 1
+        print("error whole",error_whole)
+        return error_whole
     except:
         print(traceback.print_exc())
         return -2
