@@ -427,15 +427,16 @@ def extraction_results(data,json_file_path):
             data['result'][key]['extraction_results']=extraction_results
             data['result'][key]['error']={'header':error_header,'error':error_key,'others':error_others_key,'balance':error_balance_key}
             print(data['result'][key]['error'])
-            #data['result'][key]['others_error']=others_error_key
-            return 1
+        with open (json_file_path, 'w') as file:
+            file.write(json.dumps(eval(str(data)), indent=3))
+        json_file_to_excel(json_file_path)
+                #data['result'][key]['others_error']=others_error_key
+        return 1
     except:
         print(traceback.print_exc())
         return -2
 
-    # with open (json_file_path, 'w') as file:
-    #     file.write(json.dumps(eval(str(data)), indent=3))
-    # json_file_to_excel(json_file_path)
+
 
 def json_to_excel(response):
     data = response.copy()
