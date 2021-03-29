@@ -25,6 +25,7 @@ header_dict = {'Description': ['description','transaction description','account 
 'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit(cr)','Deposits (in Rs.)'],
 'Balance':['closingbalance','balance','closing balance','balace','closing bal','balance amt','balance(inr)','Balance (in Rs.)']}
 
+mandatory_columns=['Date','Description','Credit','Debit','Balance']
 def empty_values():
     dict_empty_type={}
     for key in desc_dict:
@@ -434,6 +435,7 @@ def extraction_results(data,json_file_path):
             print("error header",error_header)
             extraction_results["fields"]=fields
             data['result'][key]['extraction_results']=extraction_results
+            data['result'][key]['mandatory_columns']=mandatory_columns
             data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key}}
             print(data['result'][key]['error'])
         with open (json_file_path, 'w') as file:
