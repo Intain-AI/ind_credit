@@ -181,6 +181,7 @@ def credit_upload_document():
                 # with open ("SSSSSS.json", 'w') as file:
                     # file.write(json.dumps(eval(str(response)), indent=3))
                 excel_file_path = excel_file_path.split('credit_app')[-1]
+                straight_flag=0
                 try:
                     result_response=extraction_results(response,json_file_path)
                     credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"To be Reviewed")
@@ -188,34 +189,42 @@ def credit_upload_document():
                         print(result_response)    
                         straight_response=straight_through(result_response)
                         if straight_response==1:
+                            straight_flag=1
                             with open(json_file_path, "r") as filee:
                                 data=json.load(filee)
                             data_ = {"batch_id":job_details['batch_id'], "response":data}
                             auth_headers = request.headers.get('Authorization')
                             response_ = requests.post(url_digitize, headers={"Authorization":auth_headers,'Content-Type':'application/json'}, data=json.dumps(data_))
+                            
                             if response_.status_code != 200:
                                 return response_.json(), response_.status_code
 
                         # print(">>>>>>>>>>",json_file_path)
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
-                        return jsonify({'message':'Successful!','batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 200
+                        return jsonify({'message':'Successful!','straight_through':straight_flag,'batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 200
                     else:
                         credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Failed")
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
-                        return jsonify({'message':'Not Successful!','batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 400
+                        return jsonify({'message':'Not Successful!','straight_through':0,'batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 400
                 except Exception as e: 
                     print(traceback.print_exc())       
                     json_file_path = "NA"
-                    return jsonify({'message': 'Upload Not successful!','batch_id': 'IN_' + jobid_counter, "json":json_file_path}), 400
+                    excel_file_path="NA"
+                    credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Failed")
+
+                    return jsonify({'message': 'Upload Not successful!','straight_through':0,'batch_id': 'IN_' + jobid_counter, "json":json_file_path}), 400
             else:
-                return jsonify({'message': 'Upload Not successful!','batch_id': 'IN_' + jobid_counter}), 400
+                return jsonify({'message': 'Upload Not successful!','straight_through':0,'batch_id': 'IN_' + jobid_counter}), 400
         except Exception as e: 
             print(traceback.print_exc())       
             json_file_path = "NA"
-            return jsonify({'message': 'Upload Not successful!','batch_id': 'IN_' + jobid_counter, "json":json_file_path}), 400
+            excel_file_path="NA"
+            credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Failed")
+            
+            return jsonify({'message': 'Upload Not successful!','straight_through':0,'batch_id': 'IN_' + jobid_counter, "json":json_file_path}), 400
     except Exception as e:
         print(traceback.print_exc())
-        return jsonify({'message': 'Not successful!'}), 401
+        return jsonify({'message': 'Not successful!','straight_through':0}), 401
 
 ##############################################################################################
 
