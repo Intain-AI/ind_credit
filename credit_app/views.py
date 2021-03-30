@@ -198,6 +198,8 @@ def credit_upload_document():
                             
                             if response_.status_code != 200:
                                 return response_.json(), response_.status_code
+                            else:
+                                credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Straight Through Processed")
 
                         # print(">>>>>>>>>>",json_file_path)
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
