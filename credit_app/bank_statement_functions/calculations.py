@@ -20,10 +20,10 @@ desc_dict={
     "Demand Draft":'dd/cc|dd',
     "UPI":'upi'}
 header_dict = {'Description': ['description','transaction description','account description','narration','naration','particular','particulars','transaction remarks','remarks','details'],
-'Date':['date','bate','tran date','txn date','(cid:9)txn date','txn. date','transaction date','post date','post dt'],
-'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','amount dr','withdrawal amt','withdrawal amt.','withdrawals','withdrawal(dr)','Withdrawal (in Rs.)'],
-'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit(cr)','Deposits (in Rs.)'],
-'Balance':['closingbalance','balance','closing balance','balace','closing bal','balance amt','balance(inr)','Balance (in Rs.)']}
+'Date':['date','bate','tran date','txn date','cid:9 txn date','txn. date','transaction date','post date','post dt'],
+'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','amount dr','withdrawal amt','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr'],
+'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit cr','deposits in rs.','deposit amount inr'],
+'Balance':['closingbalance','balance','closing balance','balace','closing bal','balance amt','balance inr','balance in rs.','balance amount inr']}
 
 mandatory_columns=['Date','Description','Credit','Debit','Balance']
 def empty_values():
@@ -122,8 +122,9 @@ def change_column_name(column_list):
     new_col_list = []
     print(column_list)
     for item in column_list:        
+        item=re.sub('[\(_\)]',' ',item)
         item=re.sub('\s+',' ',item)
-        item=re.sub('[_]','',item)
+        item=item.strip()
         print(item)
         flag = 0
         for k,v in header_dict.items():
@@ -464,6 +465,7 @@ def json_to_excel(response):
         extracted_fields =data['result'][key]['extraction_results']['fields']
     #     print(extracted_details)
         try:
+            # if extracted_details[0]
             column_list=extracted_details[0]['columns']
             column_list = [re.sub('\s+', ' ',x) for x in column_list]
             df=pd.DataFrame()
