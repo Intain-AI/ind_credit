@@ -150,12 +150,14 @@ def credit_upload_document():
             file_path = folder_path + '/' + file_name
             total_file_size += file_stat.st_size / 1000
 
+
+        job_id='IN_' + jobid_counter
         date_format = "%Y-%m-%d %H:%M"
         now_utc = datetime.datetime.now(timezone('UTC'))
         now_asia = now_utc.astimezone(timezone('Asia/Kolkata'))
         job_details['upload_date_time'] = now_asia.strftime(date_format)
         job_details['emailid'] = emailid
-        job_details['job_id'] = jobid_counter
+        # job_details['job_id'] = jobid_counter
         job_details['document_name'] = folder_name
         job_details['folder_path'] = file_path.split('.')[0]+'/'
         # job_details['file_path'] = file_path
@@ -163,7 +165,7 @@ def credit_upload_document():
         job_details['job_status'] = 'Processing'
         job_details['channel'] = 'Web App'
         job_details['reviewed_by'] = "-"
-        job_details['batch_id'] = 'IN_' + jobid_counter
+        job_details['job_id'] = job_id
         credit_db.insert_job(job_details)
 
         try:
@@ -184,7 +186,7 @@ def credit_upload_document():
                 straight_flag=0
                 try:
                     result_response=extraction_results(response,json_file_path)
-                    credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"To be Reviewed")
+                    credit_db.update_job_details(excel_file_path,json_file_path,job_id,"To be Reviewed")
                     if result_response!= -2:
                         print(result_response)    
                         straight_response=straight_through(result_response)
@@ -192,38 +194,38 @@ def credit_upload_document():
                             straight_flag=1
                             with open(json_file_path, "r") as filee:
                                 data=json.load(filee)
-                            data_ = {"batch_id":job_details['batch_id'], "response":data}
+                            data_ = {"job_id":job_details['job_id'], "response":data}
                             auth_headers = request.headers.get('Authorization')
                             response_ = requests.post(url_digitize, headers={"Authorization":auth_headers,'Content-Type':'application/json'}, data=json.dumps(data_))
                             
                             if response_.status_code != 200:
                                 return response_.json(), response_.status_code
                             else:
-                                credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Straight Through Processed")
+                                credit_db.update_job_details(excel_file_path,json_file_path,job_id,"Straight Through Processed")
 
                         # print(">>>>>>>>>>",json_file_path)
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
-                        return jsonify({'message':'Successful!','straight_through':straight_flag,'batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 200
+                        return jsonify({'message':'Successful!','straight_through':straight_flag,'job_id': job_id,"json":json_file_path}), 200
                     else:
-                        credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Failed")
+                        credit_db.update_job_details(excel_file_path,json_file_path,job_id,"Failed")
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
-                        return jsonify({'message':'Not Successful!','straight_through':0,'batch_id': 'IN_' + jobid_counter,"json":json_file_path}), 400
+                        return jsonify({'message':'Not Successful!','straight_through':0,'job_id': job_id,"json":json_file_path}), 400
                 except Exception as e: 
                     print(traceback.print_exc())       
                     json_file_path = "NA"
                     excel_file_path="NA"
-                    credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Failed")
+                    credit_db.update_job_details(excel_file_path,json_file_path,job_id,"Failed")
 
-                    return jsonify({'message': 'Upload Not successful!','straight_through':0,'batch_id': 'IN_' + jobid_counter, "json":json_file_path}), 400
+                    return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id, "json":json_file_path}), 400
             else:
-                return jsonify({'message': 'Upload Not successful!','straight_through':0,'batch_id': 'IN_' + jobid_counter}), 400
+                return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id': job_id}), 400
         except Exception as e: 
             print(traceback.print_exc())       
             json_file_path = "NA"
             excel_file_path="NA"
             credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Failed")
             
-            return jsonify({'message': 'Upload Not successful!','straight_through':0,'batch_id': 'IN_' + jobid_counter, "json":json_file_path}), 400
+            return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id, "json":json_file_path}), 400
     except Exception as e:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!','straight_through':0}), 401
@@ -239,7 +241,7 @@ def ui_validation():
             if status != 1:
                 return jsonify(response), status
             current_user = response['user_email']
-            job_response = credit_db.ui_validation(current_user,data['batch_id'])
+            job_response = credit_db.ui_validation(current_user,data['job_id'])
             desc_list=get_desc_keys()
             print("*****",desc_list)
             desc_list.append("Others")
@@ -249,7 +251,7 @@ def ui_validation():
                 no_images = len(glob.glob(job_response['folder_path']+'/*.jpg'))
                 print(job_response)
                 json_file_path=job_response['json_file_path'].split('credit_app')[1]
-                return jsonify({'message': 'Successful!','description_type':desc_list,'json_file_path':json_file_path,'image_folder_path':image_folder_path,"image_count":no_images }), 200
+                return jsonify({'message': 'Successful!','description_type':desc_list,'json_ref':[json_file_path],'images_folder_path':[image_folder_path]  ,"images_count":[no_images] }), 200
             else:
                 return jsonify({'message': 'Not successful!'}), 201
     except:
@@ -268,15 +270,15 @@ def credit_digitize_document():
                 return jsonify(response), status
             current_user = response['user_email']
             
-            batch_id = data['batch_id']
-            folder_path,excel_file_path = credit_db.digitize_document(current_user,batch_id,data['response'])
+            job_id = data['job_id']
+            folder_path,excel_file_path = credit_db.digitize_document(current_user,job_id,data['response'])
             print('excel_file_path',excel_file_path)            
             df_list_new,textfield_dict = json_to_excel(data['response'])
             # print('df_list_new',df_list_new)
             final_excel_path=analysis(excel_file_path,df_list_new,textfield_dict)
             print("****************** Digitize completed")
             final_excel_path = final_excel_path.split('credit_app')[1]
-            credit_db.update_calculation_job(excel_file_path,batch_id,final_excel_path)
+            credit_db.update_calculation_job(excel_file_path,job_id,final_excel_path)
             # return jsonify({'message': 'Successful!'}) ,200
             return jsonify({'message': 'Successful!','final_file_path':final_excel_path}), 200
 
@@ -294,9 +296,8 @@ def credit_graphs():
                 return jsonify(response), status
             current_user = response['user_email']
             
-            batch_id = data['batch_id']
-            excel_path=credit_db.get_excel(current_user,batch_id)
-            print(excel_path)
+            job_id = data['job_id']
+            excel_path=credit_db.get_excel(current_user,job_id)
             complete_file = os.getcwd() + "/credit_app" +excel_path
             print(complete_file)
             df=pd.read_excel(complete_file,sheet_name="Transaction_data")
@@ -329,14 +330,14 @@ def credit_e2EProcessing():
     if response.status_code != 200:
         return response.json(), response.status_code
     
-    batch_id = response.json()["batch_id"]
+    job_id = response.json()["job_id"]
 
     json_file = response.json()["json"]
 
     with open(json_file, "r") as filee:
         data=json.load(filee)
     
-    data_ = {"batch_id":batch_id, "response":data}
+    data_ = {"job_id":job_id, "response":data}
     response_ = requests.post(url_digitize, headers={"Authorization":auth_headers,'Content-Type':'application/json'}, data=json.dumps(data_))
 
     if response_.status_code != 200:

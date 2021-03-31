@@ -86,13 +86,13 @@ def userDashboardDetail(request_email):
         return -2
 
 ########################################################################################################################
-def ui_validation(request_email,batch_id):
+def ui_validation(request_email,job_id):
     #pprint.pprint(request_data)
 
     job_response = collection_job.find_one(
         {
             'emailid': request_email,
-            'batch_id':batch_id
+            'job_id':job_id
         }, {
             '_id': 0,
             "job_size" : 0,
@@ -205,9 +205,9 @@ def update_job_details(excel_file_path,json_file_path,job_id,message):
         return -2
 
 ########################################################################################################################
-def update_calculation_job(excel_file_path,batch_id,final_excel_path):
+def update_calculation_job(excel_file_path,job_id,final_excel_path):
     try:
-        collection_job.update_one({'batch_id': batch_id}, {"$set":{'job_status': "Processed",'excel_file_path':excel_file_path,'final_excel_path':final_excel_path}})
+        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status': "Processed",'excel_file_path':excel_file_path,'final_excel_path':final_excel_path}})
         mongo_db_client.close()
         return 
     except:

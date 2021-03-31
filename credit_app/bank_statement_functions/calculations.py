@@ -23,7 +23,7 @@ header_dict = {'Description': ['description','transaction description','account 
 'Date':['date','bate','tran date','txn date','cid:9 txn date','txn. date','transaction date','post date','post dt'],
 'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','amount dr','withdrawal amt','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr'],
 'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit cr','deposits in rs.','deposit amount inr'],
-'Balance':['closingbalance','balance','closing balance','balace','closing bal','balance amt','balance inr','balance in rs.','balance amount inr']}
+'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance inr','balance in rs.','balance amount inr']}
 
 mandatory_columns=['Date','Description','Credit','Debit','Balance']
 def empty_values():
@@ -441,7 +441,7 @@ def extraction_results(data,json_file_path):
             print(data['result'][key]['error'])
         with open (json_file_path, 'w') as file:
             file.write(json.dumps(eval(str(data)), indent=3))
-        json_file_to_excel(json_file_path)
+        # json_file_to_excel(json_file_path)
                 #data['result'][key]['others_error']=others_error_key
         print("error whole",error_whole)
         return error_whole
