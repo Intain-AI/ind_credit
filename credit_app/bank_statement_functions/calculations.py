@@ -299,6 +299,7 @@ def validate_column_header(column_list,error_header):
 
 def extraction_results(data,json_file_path):
     try:
+        print(textfield_list)
         with open (json_file_path, 'w') as file:
             file.write(json.dumps(eval(str(data)), indent=3))
         dict_bank=get_logical_text(data)
@@ -417,26 +418,19 @@ def extraction_results(data,json_file_path):
 
             extraction_results={}
             extraction_results["tabledata"]=tabledata
-            if key == 'Page_1':
-                textfield = {}
-                for attr in textfield_list:
-                    attr['value']=dict_bank[attr['varname']]            
-                textfield["textfield"] = textfield_list
-                fields = []
-                fields.append(textfield)
-            else:
-                textfield = {}
-                textfield["textfield"] = []
-                fields = []
-                fields.append(textfield)
             error_whole.append(error_key)
             print("error",error)
             print("error header",error_header)
-            extraction_results["fields"]=fields
+            # extraction_results["fields"]=fields
             data['result'][key]['extraction_results']=extraction_results
             # data['result'][key]['mandatory_columns']=mandatory_columns
-            data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key}}
+            data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key}}    
             print(data['result'][key]['error'])
+        for attr in textfield_list:
+            attr['value']=dict_bank[attr['varname']]            
+        # print(textfield_list)
+        data['result']['header_fields']=textfield_list
+         
         with open (json_file_path, 'w') as file:
             file.write(json.dumps(eval(str(data)), indent=3))
         # json_file_to_excel(json_file_path)
@@ -455,45 +449,43 @@ def json_to_excel(response):
     # with open(response, "r") as json_file:
     #     data=json.load(json_file)
     df_list_new = []
+    extracted_fields =data['result']['header_fields']
 
     for key,value in data['result'].items():
         tabledata=[]
-        # print(key)
-        extracted_details=data['result'][key]['extraction_results']['tabledata']
-        extracted_fields =data['result'][key]['extraction_results']['fields']
-    #     print(extracted_details)
-        try:
-            # if extracted_details[0]
-            column_list=extracted_details[0]['columns']
-            column_list = [re.sub('\s+', ' ',x) for x in column_list]
-            df=pd.DataFrame()
-            for rows in extracted_details[0]['data']:
-                row_list=[]
-                for row in rows:
-                    row_list.append(row['word'])
-                # print('row_list',row_list,len(row_list))
-                df=df.append([row_list])
-        
-            df.reset_index(drop=True,inplace=True)
-            df.columns=column_list 
-            # df.to_excel('SSSSSSS.xlsx')
-            def trim(x):
-                if x.dtype == object: x = x.str.strip().replace('\s+', ' ',regex=True)
-                return(x)
-            df = df.apply(trim)
-            df_list_new.append(df)
+        print(value)
+        if 'extraction_results' in value:
+            try:
+                extracted_details=data['result'][key]['extraction_results']['tabledata']
+                column_list=extracted_details[0]['columns']
+                column_list = [re.sub('\s+', ' ',x) for x in column_list]
+                df=pd.DataFrame()
+                for rows in extracted_details[0]['data']:
+                    row_list=[]
+                    for row in rows:
+                        row_list.append(row['word'])
+                    # print('row_list',row_list,len(row_list))
+                    df=df.append([row_list])
             
+                df.reset_index(drop=True,inplace=True)
+                df.columns=column_list 
+                # df.to_excel('SSSSSSS.xlsx')
+                def trim(x):
+                    if x.dtype == object: x = x.str.strip().replace('\s+', ' ',regex=True)
+                    return(x)
+                df = df.apply(trim)
+                df_list_new.append(df)
+                
 
-        except:
-            print(traceback.print_exc())
-            pass
+            except:
+                print(traceback.print_exc())
+                pass
         
 
-        if key == 'Page_1':
-            textfield_dict = {}
-            for index in extracted_fields[0]['textfield']:
-                print('+++++++++++++++++++',index['label'],index['value'])
-                textfield_dict[index['label']]  = index['value']
+    textfield_dict = {}
+    for index in extracted_fields:
+        print('+++++++++++++++++++',index['label'],index['value'])
+        textfield_dict[index['label']]  = index['value']
 
 
 
