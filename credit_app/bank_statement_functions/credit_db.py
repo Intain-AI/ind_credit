@@ -66,7 +66,6 @@ def userDashboardDetail(request_email):
             '_id': 0,
             "job_size" : 0,
             'document_name':0,
-            'job_id' : 0,
             'folder_path' :0,
             'json_file_path':0,
             'excel_file_path':0
@@ -97,7 +96,6 @@ def ui_validation(request_email,job_id):
             '_id': 0,
             "job_size" : 0,
             'document_name':0,
-            'job_id' : 0
         })
     print(":::::::::::::::::;",job_response)
     if job_response:
@@ -108,18 +106,17 @@ def ui_validation(request_email,job_id):
         return -2
 
 ########################################################################################################################
-def digitize_document(request_email,batch_id,json_response):
+def digitize_document(request_email,job_id,json_response):
     #pprint.pprint(request_data)
 
     job_response = collection_job.find_one(
         {
             'emailid': request_email,
-            'batch_id':batch_id
+            'job_id':job_id
         }, {
             '_id': 0,
             "job_size" : 0,
             'document_name':0,
-            'job_id' : 0
         })
     
     if job_response:  
@@ -135,18 +132,17 @@ def digitize_document(request_email,batch_id,json_response):
         return -2
 
 ########################################################################################################################
-def get_excel(request_email,batch_id):
+def get_excel(request_email,job_id):
     try:
 
         job_response = collection_job.find_one(
             {
                 'emailid': request_email,
-                'batch_id':batch_id
+                'job_id':job_id
             }, {
                 '_id': 0,
                 "job_size" : 0,
                 'document_name':0,
-                'job_id' : 0
             })
         
         if job_response:  
@@ -173,26 +169,26 @@ def get_jobid(request_email):
         return -2
 
 ########################################################################################################################
-def insert_new_job(emailid, job_id, applicant_id, new_file_name):
-    try:
-        format_date = "%Y-%m-%d %H:%M"
-        now_utc = datetime.datetime.now(timezone('UTC'))
-        now_asia = now_utc.astimezone(timezone('Asia/Kolkata'))
-        upload_date_time = now_asia.strftime(format_date)
+# def insert_new_job(emailid, job_id, applicant_id, new_file_name):
+#     try:
+#         format_date = "%Y-%m-%d %H:%M"
+#         now_utc = datetime.datetime.now(timezone('UTC'))
+#         now_asia = now_utc.astimezone(timezone('Asia/Kolkata'))
+#         upload_date_time = now_asia.strftime(format_date)
 
-        job_details['emailid'] = emailid
-        job_details['job_id'] = job_id
-        job_details['upload_date_time'] = upload_date_time
-        job_details['job_status'] = 'Incomplete'
-        job_details['file_path'] = new_file_name
-        job_details['applicant_id'] = applicant_id
-        collection_job.insert_one(request_data)
+#         job_details['emailid'] = emailid
+#         job_details['job_id'] = job_id
+#         job_details['upload_date_time'] = upload_date_time
+#         job_details['job_status'] = 'Incomplete'
+#         job_details['file_path'] = new_file_name
+#         job_details['applicant_id'] = applicant_id
+#         collection_job.insert_one(request_data)
 
-        mongo_db_client.close()
-        return 0
-    except:
-        print(traceback.print_exc())
-        return -2
+#         mongo_db_client.close()
+#         return 0
+#     except:
+#         print(traceback.print_exc())
+#         return -2
 
 ########################################################################################################################
 def update_job_details(excel_file_path,json_file_path,job_id,message):
