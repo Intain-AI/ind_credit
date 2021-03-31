@@ -453,7 +453,6 @@ def json_to_excel(response):
 
     for key,value in data['result'].items():
         tabledata=[]
-        print(value)
         if 'extraction_results' in value:
             try:
                 extracted_details=data['result'][key]['extraction_results']['tabledata']
