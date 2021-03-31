@@ -413,9 +413,7 @@ def extraction_results(data,json_file_path):
                 
                 error_key.append(error)
                 # error_key.append(error)
-                
-                
-                tabledata.append({'columns':column_list,'data':row_list1,"row_coordinates":row_coordinates_list,"column_coordinates":tables['column_cords']})
+                tabledata.append({'columns':column_list,'mandatory_columns':mandatory_columns,'data':row_list1,"row_coordinates":row_coordinates_list,"column_coordinates":tables['column_cords']})
 
             extraction_results={}
             extraction_results["tabledata"]=tabledata
@@ -436,7 +434,7 @@ def extraction_results(data,json_file_path):
             print("error header",error_header)
             extraction_results["fields"]=fields
             data['result'][key]['extraction_results']=extraction_results
-            data['result'][key]['mandatory_columns']=mandatory_columns
+            # data['result'][key]['mandatory_columns']=mandatory_columns
             data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key}}
             print(data['result'][key]['error'])
         with open (json_file_path, 'w') as file:

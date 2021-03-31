@@ -105,6 +105,26 @@ def ui_validation(request_email,job_id):
         mongo_db_client.close()
         return -2
 
+def review_document(request_email,job_id,filename):
+    #pprint.pprint(request_data)
+
+    job_response = collection_job.find_one(
+        {
+            'emailid': request_email,
+            'job_id':job_id,
+            'filename':filename
+        }, {
+            '_id': 0,
+            "job_size" : 0,
+            'document_name':0,
+        })
+    print(":::::::::::::::::;",job_response)
+    if job_response:
+        mongo_db_client.close()
+        return job_response
+    else:
+        mongo_db_client.close()
+        return -2
 ########################################################################################################################
 def digitize_document(request_email,job_id,json_response):
     #pprint.pprint(request_data)

@@ -149,6 +149,7 @@ def credit_upload_document():
             file_stat = os.stat(os.path.join(folder_path, file_name))
             file_path = folder_path + '/' + file_name
             total_file_size += file_stat.st_size / 1000
+            job_details['filename'] = file_name
 
 
         job_id='IN_' + jobid_counter
@@ -251,7 +252,7 @@ def ui_validation():
                 no_images = len(glob.glob(job_response['folder_path']+'/*.jpg'))
                 print(job_response)
                 json_file_path=job_response['json_file_path'].split('credit_app')[1]
-                return jsonify({'message': 'Successful!','description_type':desc_list,'json_ref':[json_file_path],'images_folder_path':[image_folder_path]  ,"images_count":[no_images] }), 200
+                return jsonify({'message': 'Successful!','description_type':desc_list,'filename':[job_response['filename']],'json_ref':[json_file_path],'images_folder_path':[image_folder_path]  ,"images_count":[no_images] }), 200
             else:
                 return jsonify({'message': 'Not successful!'}), 201
     except:
@@ -259,6 +260,32 @@ def ui_validation():
         return jsonify({'message': 'Not successful!'}), 201
 
 ########################################################################################################
+
+@app.route("/credit/review", methods=['POST'])
+def credit_review_document():
+    data = request.get_json()
+    try:
+        if request.method == 'POST':           
+            response, status,_ = verify_token(request)
+            if status != 1:
+                return jsonify(response), status
+            current_user = response['user_email']
+            
+            job_id = data['job_id']
+            job_response = credit_db.review_document(current_user,data['job_id'],data['filename'])
+            with open(job_response['json_file_path'], "r") as json_file:
+                data=json.load(json_file)
+
+            # json_file_path=job_response['json_file_path'].split('credit_app')[1]
+            return jsonify({'message': 'Successful!','data':data }), 200
+        else:
+            return jsonify({'message': 'Not successful!'}), 201
+    except:
+        print(traceback.print_exc())
+        return jsonify({'message': 'Not successful!'}), 201
+
+########################################################################################################
+
 
 @app.route("/credit/digitize_document", methods=['POST'])
 def credit_digitize_document():
