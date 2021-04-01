@@ -421,7 +421,10 @@ def extraction_results(data,json_file_path):
             error_whole.append(error_key)
             print("error",error)
             print("error header",error_header)
-            # extraction_results["fields"]=fields
+            if key=="Page_1":
+                extraction_results["fields"]=True
+            else:
+                extraction_results["fields"]=False
             data['result'][key]['extraction_results']=extraction_results
             # data['result'][key]['mandatory_columns']=mandatory_columns
             data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key}}    
