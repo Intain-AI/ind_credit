@@ -10,4 +10,5 @@ data/mongodb/
 detection/predicted_images/
 save_table_crop_images/
 config/
+config1/
 ocr_config/

@@ -21,9 +21,9 @@ desc_dict={
     "UPI":'upi'}
 header_dict = {'Description': ['description','transaction description','account description','narration','naration','particular','particulars','transaction remarks','remarks','details'],
 'Date':['date','bate','tran date','txn date','cid:9 txn date','txn. date','transaction date','post date','post dt'],
-'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','amount dr','withdrawal amt','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr'],
-'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit cr','deposits in rs.','deposit amount inr'],
-'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance inr','balance in rs.','balance amount inr']}
+'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','withdrawal no','amount dr','withdrawal amt','withdrawal amount','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr'],
+'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit amount','deposit cr','deposits in rs.','deposit amount inr'],
+'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance amount','balance inr','balance in rs.','balance amount inr']}
 
 mandatory_columns=['Date','Description','Credit','Debit','Balance']
 def empty_values():
@@ -122,7 +122,7 @@ def change_column_name(column_list):
     new_col_list = []
     print(column_list)
     for item in column_list:        
-        item=re.sub('[\(_\)]',' ',item)
+        item=re.sub('[\(_\)*]',' ',item)
         item=re.sub('\s+',' ',item)
         item=item.strip()
         print(item)
@@ -236,9 +236,12 @@ def json_file_to_excel(json_file_path):
 def balance_column_check(credit_list,debit_list,balance_list,error):
     error_balance_rows=[]
     try:
-        credit_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in credit_list]
-        debit_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in debit_list]
-        balance_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in balance_list]
+        # credit_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in credit_list]
+        # debit_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in debit_list]
+        # balance_list = [float((re.sub('[^0-9.-]','',x)).strip()) if x!="" else 0.0 for x in balance_list]
+        credit_list = [float(x) for x in credit_list]
+        debit_list = [float(x) for x in debit_list]
+        balance_list = [float(x) for x in balance_list]
         print("length C D B",len(credit_list),len(debit_list),len(balance_list))
         if len(credit_list)!=len(debit_list) and len(credit_list)!=len(balance_list) and len(debit_list)!=len(balance_list):
             print("Length Match Error\n")
@@ -391,10 +394,19 @@ def extraction_results(data,json_file_path):
                     for index,cols in enumerate(row_list):
                         if column_index['Credit']!=0 and column_index['Debit']!=0 and column_index['Balance']!=0:  
                             if cols['columnNo']==column_index['Credit']:
+                                if cols['word']=='-' or cols['word']=='':
+                                    cols['word']='0.0'
+                                cols['word'] = re.sub('[^0-9.-]','',cols['word']).strip()
                                 credit_list.append(cols['word'])
                             if cols['columnNo']==column_index['Debit']:
+                                if cols['word']=='-' or cols['word']=='':
+                                    cols['word']='0.0'
+                                cols['word'] = re.sub('[^0-9.-]','',cols['word']).strip()
                                 debit_list.append(cols['word'])
                             if cols['columnNo']==column_index['Balance']:
+                                if cols['word']=='-' or cols['word']=='':
+                                    cols['word']='0.0'
+                                cols['word'] = re.sub('[^0-9.-]','',cols['word']).strip()
                                 balance_list.append(cols['word'])
                         if column_index['Date']!=0:
                             if cols['columnNo']==column_index['Date']:
