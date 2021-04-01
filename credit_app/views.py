@@ -375,14 +375,23 @@ def credit_e2EProcessing():
     print(complete_file)
     try:
         balance_sheet = pd.read_excel(complete_file, sheet_name = "Salary Calculations")
-        salary = balance_sheet["Balance"].apply(lambda x:re.sub('[^0-9.]','',x)).astype(float).sum()
+        salary = balance_sheet["Balance"].apply(lambda x:re.sub('[^0-9.]','',x)).astype(float).mean()
     except:
         salary = 0
 
     calculation_sheet = pd.read_excel(complete_file, sheet_name = "Calculations")
-    final=dict(calculation_sheet.values)
+    final1=dict(calculation_sheet.values)
+    # final={}
+    keys_to_extract = ['Account Holder', "Account Number","IFSC Code","Acount Opening Date","Monthly Average Balance"]
+
+    final = {key: final1[key] for key in keys_to_extract}
+
+    # final[]=final1['Account Holder']
     # final = calculation_sheet.to_dict(orient='records')[0]
-    final["Total Salary"] = salary
+    final["Average Salary"] = salary
+    final["Type of Account"] = "Individual Account"    
+    # final = calculation_sheet.to_dict(orient='records')[0]
+    # final["Total Salary"] = salary
 
     return jsonify(final), 200
 
