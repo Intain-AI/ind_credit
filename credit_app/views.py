@@ -186,11 +186,17 @@ def credit_upload_document():
                 excel_file_path = excel_file_path.split('credit_app')[-1]
                 straight_flag=0
                 try:
-                    result_response=extraction_results(response,json_file_path)
-                    credit_db.update_job_details(excel_file_path,json_file_path,job_id,"To be Reviewed")
+                    result_response,textfield_list=extraction_results(response,json_file_path)
+                    credit_db.update_job_details(excel_file_path,result_response,json_file_path,job_id,"To be Reviewed")
                     if result_response!= -2:
-                        print(result_response)    
+                        print("upload response",result_response)    
                         straight_response=straight_through(result_response)
+                        # print(textfield_list)
+                        textfield_values={}
+                        for i in textfield_list:
+                            textfield_values[i['label']]=i['value']
+                        print("textfield_values\n",textfield_values)
+                        credit_db.insert_textfield(job_id,textfield_values)
                         if straight_response==1:
                             straight_flag=1
                             with open(json_file_path, "r") as filee:
@@ -202,29 +208,35 @@ def credit_upload_document():
                             if response_.status_code != 200:
                                 return response_.json(), response_.status_code
                             else:
-                                credit_db.update_job_details(excel_file_path,json_file_path,job_id,"Straight Through Processed")
+                                credit_db.update_job_details(excel_file_path,result_response,json_file_path,job_id,"Straight Through Processed")
 
                         # print(">>>>>>>>>>",json_file_path)
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
                         return jsonify({'message':'Successful!','straight_through':straight_flag,'job_id': job_id,"json":json_file_path}), 200
                     else:
-                        credit_db.update_job_details(excel_file_path,json_file_path,job_id,"Failed")
+                        credit_db.update_job_details(excel_file_path,result_response,json_file_path,job_id,"Failed")
+                        credit_db.insert_textfield(job_id,{})
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
                         return jsonify({'message':'Not Successful!','straight_through':0,'job_id': job_id,"json":json_file_path}), 400
                 except Exception as e: 
                     print(traceback.print_exc())       
                     json_file_path = "NA"
                     excel_file_path="NA"
-                    credit_db.update_job_details(excel_file_path,json_file_path,job_id,"Failed")
+                    credit_db.insert_textfield(job_id,{})
+
+                    credit_db.update_job_details(excel_file_path,"extraction failed",json_file_path,job_id,"Failed")
 
                     return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id, "json":json_file_path}), 400
             else:
+                credit_db.insert_textfield(job_id,{})
                 return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id': job_id}), 400
         except Exception as e: 
             print(traceback.print_exc())       
             json_file_path = "NA"
             excel_file_path="NA"
-            credit_db.update_job_details(excel_file_path,json_file_path,jobid_counter,"Failed")
+            credit_db.insert_textfield(job_id,{})
+
+            credit_db.update_job_details(excel_file_path,"something failed",json_file_path,jobid_counter,"Failed")
             
             return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id, "json":json_file_path}), 400
     except Exception as e:
@@ -355,7 +367,18 @@ def credit_e2EProcessing():
     
     response = requests.post(url_upload, headers={"Authorization":auth_headers}, files=fileData)
     if response.status_code != 200:
-        return response.json(), response.status_code
+        if "job_id" in response.json():
+            textfields=credit_db.get_textfields(response.json()["job_id"])
+            print(textfields)
+            if textfields!=-2:
+                textfields["Processing Type"] = "Manual Intervention Required"
+                textfields["Type of Account"] = "Individual Account"
+                return textfields
+            else:
+                return response.json(), response.status_code
+        else:
+            return response.json(), response.status_code
+
     
     job_id = response.json()["job_id"]
 
@@ -368,7 +391,11 @@ def credit_e2EProcessing():
     response_ = requests.post(url_digitize, headers={"Authorization":auth_headers,'Content-Type':'application/json'}, data=json.dumps(data_))
 
     if response_.status_code != 200:
-        return response_.json(), response_.status_code
+        textfields=credit_db.get_textfields(job_id)
+        print(textfields)
+        textfields["Type of Account"] = "Individual Account"
+        textfields["Processing Type"] = "Manual Intervention Required"
+        return textfields
     
     file_path = response_.json()["final_file_path"]
     complete_file = os.getcwd() + "/credit_app" +file_path
@@ -389,7 +416,8 @@ def credit_e2EProcessing():
     # final[]=final1['Account Holder']
     # final = calculation_sheet.to_dict(orient='records')[0]
     final["Average Salary"] = salary
-    final["Type of Account"] = "Individual Account"    
+    final["Type of Account"] = "Individual Account"
+    final["Processing Type"] = "Straight Through Processed"    
     # final = calculation_sheet.to_dict(orient='records')[0]
     # final["Total Salary"] = salary
 

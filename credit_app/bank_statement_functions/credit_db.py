@@ -211,13 +211,41 @@ def get_jobid(request_email):
 #         return -2
 
 ########################################################################################################################
-def update_job_details(excel_file_path,json_file_path,job_id,message):
+def update_job_details(excel_file_path,response,json_file_path,job_id,message):
     try:
-        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status':message,'excel_file_path':excel_file_path,'json_file_path':json_file_path}})
+        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status':message,'excel_file_path':excel_file_path,'json_file_path':json_file_path,'response':response}})
         mongo_db_client.close()
         return 
     except:
         print(traceback.print_exc())
+        return -2
+
+def insert_textfield(job_id,textfield_list):
+    try:
+        collection_job.update_one({'job_id': job_id}, {"$set":{'textfields':textfield_list}})
+        mongo_db_client.close()
+        return 
+    except:
+        print(traceback.print_exc())
+        return -2
+
+def get_textfields(job_id):
+    #pprint.pprint(request_data)
+
+    job_response = collection_job.find_one(
+        {
+            'job_id':job_id
+        }, {
+            '_id': 0,
+            "job_size" : 0,
+            'document_name':0,
+        })
+    print(":::::::::::::::::;",job_response)
+    if job_response:
+        mongo_db_client.close()
+        return job_response['textfields']
+    else:
+        mongo_db_client.close()
         return -2
 
 ########################################################################################################################

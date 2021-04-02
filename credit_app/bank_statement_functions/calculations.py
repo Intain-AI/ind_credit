@@ -30,7 +30,7 @@ def empty_values():
     dict_empty_type={}
     for key in desc_dict:
         dict_empty_type['No of '+key+' Transactions']=0  
-    print(dict_empty_type)
+    # print(dict_empty_type)
     dict_empty_type['No of Other Transactions']=0  
     return(dict_empty_type)
     # df={'No of Auto Debit Transactions':0,
@@ -68,7 +68,7 @@ def get_logical_text(data):
     text=re.sub('\s+',' ',text)
     Name = ['mr','ms','dear','mrs','name']
     acc_no_list=['account no','account number']
-    months=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+    months=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec','march','january','february','september']
     words=text.split()
     for word in words:
         if word.lower() in Name and dict_bank['account_holder_name']=='NA':
@@ -81,10 +81,17 @@ def get_logical_text(data):
     i=text.find('account statement')
     if i!=-1:
         month_list=re.findall(month_string,text[i:i+200].lower())
-        # print("*******month list",month_list)
+        print("*******month list",month_list,text[i:i+200].lower())
         if month_list and dict_bank['ac_open_date']=='NA':
-            dates=words[words.index(month_list[0])-1:words.index(month_list[0])+2]
-            dict_bank['ac_open_date']=' '.join(dates)
+            for j in month_list:
+                print(j)
+                if dict_bank['ac_open_date']=='NA':
+                    try:
+                        dates=words[words.index(month_list[j])-1:words.index(month_list[j])+2]
+                        print(dates)
+                        dict_bank['ac_open_date']=' '.join(dates)
+                    except:
+                        pass
     ifsc_list  = re.findall(r'[a-zA-Z]{4}[0o][0-9]{6}',text)
     if ifsc_list:
         dict_bank['ifsc_code']=ifsc_list[0].upper()  
@@ -120,12 +127,12 @@ def change_column_name(column_list):
     # print(df)
     column_list = [s.strip() for s in column_list]
     new_col_list = []
-    print(column_list)
+    # print(column_list)
     for item in column_list:        
         item=re.sub('[\(_\)*]',' ',item)
         item=re.sub('\s+',' ',item)
         item=item.strip()
-        print(item)
+        # print(item)
         flag = 0
         for k,v in header_dict.items():
             if item.lower() in v:
@@ -186,7 +193,7 @@ def straight_through(result):
     try:
         for page_list in result:
             for table_list in page_list: 
-                print(table_list)
+                # print(table_list)
                 if table_list['header']==1 or table_list['balance']==1 or table_list['date']==1 or table_list['reconcilation']==1:
                     return 0
         return 1
@@ -341,7 +348,7 @@ def extraction_results(data,json_file_path):
                     column_list.insert(0,'Transaction_Type')
                     print("Coluuuuumn list",column_list)
                     column_index=validate_column_header(column_list,error_header)
-                    print(column_index)
+                    # print(column_index)
                     if 0 in column_index.values():
                         error['header']=1
                         
@@ -414,7 +421,7 @@ def extraction_results(data,json_file_path):
 
                     row_list1.append(row_list)
                 if len(credit_list)!=0 and len(debit_list)!=0 and len(balance_list)!=0: 
-                    print(credit_list,debit_list,balance_list)
+                    # print(credit_list,debit_list,balance_list)
                     error,balance_error=balance_column_check(credit_list,debit_list,balance_list,error)
                     print("errrrroorrrr",balance_error)
                     if len(balance_error)!=0:
@@ -431,8 +438,8 @@ def extraction_results(data,json_file_path):
             extraction_results={}
             extraction_results["tabledata"]=tabledata
             error_whole.append(error_key)
-            print("error",error)
-            print("error header",error_header)
+            # print("error",error)
+            # print("error header",error_header)
             if key=="Page_1":
                 extraction_results["fields"]=True
             else:
@@ -440,7 +447,7 @@ def extraction_results(data,json_file_path):
             data['result'][key]['extraction_results']=extraction_results
             # data['result'][key]['mandatory_columns']=mandatory_columns
             data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key}}    
-            print(data['result'][key]['error'])
+            # print(data['result'][key]['error'])
         for attr in textfield_list:
             attr['value']=dict_bank[attr['varname']]            
         # print(textfield_list)
@@ -451,7 +458,7 @@ def extraction_results(data,json_file_path):
         # json_file_to_excel(json_file_path)
                 #data['result'][key]['others_error']=others_error_key
         print("error whole",error_whole)
-        return error_whole
+        return error_whole,textfield_list
     except:
         print(traceback.print_exc())
         return -2
