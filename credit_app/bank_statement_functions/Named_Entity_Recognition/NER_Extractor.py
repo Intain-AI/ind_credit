@@ -16,6 +16,7 @@ def nerOutput(word,tag,sentences,text_list):
         re=[]
         extracted_fields=[]
         for i in range(len(tag)):
+            # print(tag[i])
             result={}
             if tag[i] in IOB_tags:
                 ind=IOB_tags.index(tag[i])
@@ -27,6 +28,7 @@ def nerOutput(word,tag,sentences,text_list):
                 result["value"]=word[i]
                 result["varname"]=key    
                 result["logical_cell_position"]=logical_id
+                # if result['varname'] 
                 re.append(result)
 
         for i in range(len(re)):
@@ -67,7 +69,7 @@ def predict_input(sentences):
     
         for i in range(len(sentences)):
             for j in range(len(sentences[i])):
-                if(prediction[i][j]!='O'):
+                if prediction[i][j]!='O' and prediction[i][j] not in tag:
                     word.append(sentences[i][j])
                     tag.append(prediction[i][j])
 
@@ -78,7 +80,7 @@ def predict_input(sentences):
 
 def ruleBasedNER(result,text_list):
     text=""
-    # print("Result",result)
+    print("Result",result)
     for i in text_list:
         text=text+' '+(i['text'])
     # print("\n\n\ntextttt",text)
@@ -110,7 +112,7 @@ def ruleBasedNER(result,text_list):
             print("*******month list",month_list,text[i:i+200].lower())
             if month_list and dict_bank['ac_open_date']=='NA':
                 for j in month_list:
-                    print(j)
+                    # print(j)
                     if dict_bank['ac_open_date']=='NA':
                         try:
                             dates=words[words.index(month_list[j])-1:words.index(month_list[j])+2]
@@ -144,6 +146,7 @@ def nerMain(data):
     try:
         text_list,sentences,tokens=process_input_file(data)
         word,tag=predict_input(tokens)
+        # print(word,tag)
         result=nerOutput(word,tag,sentences,text_list)
         final_result=ruleBasedNER(result,text_list)
         return final_result
