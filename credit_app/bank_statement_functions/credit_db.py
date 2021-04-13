@@ -87,7 +87,7 @@ def ui_validation(request_email,job_id):
             "job_size" : 0,
             'document_name':0,
         })
-    print(":::::::::::::::::;",job_response)
+    # print(":::::::::::::::::;",job_response)
     if job_response:
         mongo_db_client.close()
         return job_response
@@ -108,7 +108,7 @@ def review_document(request_email,job_id,filename):
             "job_size" : 0,
             'document_name':0,
         })
-    print(":::::::::::::::::;",job_response)
+    # print(":::::::::::::::::;",job_response)
     if job_response:
         mongo_db_client.close()
         return job_response
@@ -225,7 +225,7 @@ def get_textfields(job_id):
             "job_size" : 0,
             'document_name':0,
         })
-    print(":::::::::::::::::;",job_response)
+    # print(":::::::::::::::::;",job_response)
     if job_response:
         mongo_db_client.close()
         return job_response['textfields']

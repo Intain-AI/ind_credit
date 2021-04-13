@@ -5,7 +5,7 @@ from datetime import datetime
 import os,json,traceback
 from .response import textfield_list
 from .Named_Entity_Recognition.NER_Extractor import nerMain
-from .functions import change_column_name,preprocess_amount,preprocess_date,transaction_type_description,guess_date,get_blank_coordinates,add_blank_col,balance_column_check,validate_column_header,add_dictionary,debit_credit_mix
+from .functions import change_column_name,preprocess_amount,preprocess_date,transaction_type_description,correct_date,get_blank_coordinates,add_blank_col,balance_column_check,validate_column_header,add_dictionary,debit_credit_mix
 
 mandatory_columns=['Date','Description','Credit','Debit','Balance']
 desc_remove=['brought forward','carried forward','closing balance','transaction total']
@@ -43,13 +43,13 @@ def validate_columns(row_list,column_index,error,credit_list,debit_list,balance_
             if cols['columnNo']==column_index['Date']:
                 cols['word']=preprocess_date(cols['word'])
                 try:
-                    date=guess_date(cols['word'])
-                    if date:
+                    date=correct_date(cols['word'])
+                    if date!=-2:
                         cols['word']=date
                         date_list.append(date)
                     else:
                         error['date']=1
-                        print("else date error",date,index)
+                        # print("else date error",date,index)
                         date_error.append(index)
                 except:
                     error['date']=1

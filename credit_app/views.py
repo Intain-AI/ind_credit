@@ -77,7 +77,7 @@ def docelement_upload_document():
         print("Cheking User Dashboard  ")
         current_user = response['user_email']
         data = request.get_json()
-        print("dataaa",data)
+        # print("dataaa",data)
         file_path = data['file_path']
         img_dir_path = data['img_dir_path']
         model_type = "stage_2" ; ocr_type = "google_ocr" ; password = ""
@@ -244,7 +244,7 @@ def ui_validation():
             job_response = credit_db.ui_validation(current_user,data['job_id'])
             desc_list=get_desc_keys()
             desc_list.append("Others")
-            print(desc_list)
+            # print(desc_list)
             if job_response != -2:      
                 image_folder_path=job_response['folder_path'].split('credit_app')[1]
                 no_images = len(glob.glob(job_response['folder_path']+'/*.jpg'))

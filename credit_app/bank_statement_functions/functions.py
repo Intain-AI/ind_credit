@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 import os,json,traceback
 from .response import textfield_list
+import datefinder
 
 idd=50000
 desc_dict={
@@ -20,11 +21,11 @@ desc_dict={
     "Loan":'disburse',          
     "Demand Draft":'dd/cc|dd',
     "UPI":'upi'}
-header_dict = {'Description': ['description','transaction description','account description','narration','naration','particular','particulars','transaction remarks','remarks','details'],
-'Date':['date','bate','tran date','txn date','cid:9 txn date','txn. date','transaction date','post date','post dt'],
+header_dict = {'Description': ['description','transaction description','account description','narration','naration','particular','particulars','transaction remarks','remarks','details','keterangan'],
+'Date':['date','bate','tran date','txn date','cid:9 txn date','txn. date','transaction date','post date','post dt','tanggal'],
 'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','withdrawal no','amount dr','withdrawal amt','withdrawal amount','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr'],
 'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit amount','deposit cr','deposits in rs.','deposit amount inr'],
-'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance amount','balance inr','balance in rs.','balance amount inr']}
+'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance amount','balance inr','balance in rs.','balance amount inr','saldo']}
 
 # def empty_values():
 #     dict_empty_type={}
@@ -42,7 +43,15 @@ def get_desc_keys():
     # print("***desc dict keys****",desc_dict.keys())
     return list(desc_dict.keys())
 
-
+def correct_date(date_string):
+    try:
+        matches = datefinder.find_dates(date_string)         
+        match=list(matches)
+        # print(match[0].strftime("%Y-%m-%d")) 
+        return(match[0].strftime("%Y-%m-%d"))
+    except:
+        print("except correct date",date_string)
+        return -2
 def change_column_name(column_list):
     # print(df)
     column_list = [s.strip() for s in column_list]
