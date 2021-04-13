@@ -23,7 +23,8 @@ from .bank_statement_functions import credit_db
 # from .bank_statement_functions.combining_dataframes import combined_dataframe
 # from .bank_statement_functions.calculation_analysis import get_statement_analysis
 from .bank_statement_functions.table_reconstruction import get_table_data,analysis 
-from .bank_statement_functions.calculations import json_to_excel,extraction_results,get_desc_keys,straight_through
+from .bank_statement_functions.calculations import json_to_excel,extraction_results
+from .bank_statement_functions.functions import get_desc_keys,straight_through
 from .bank_statement_functions import transaction_analysis
 
 CORS(app)
@@ -68,46 +69,29 @@ def user_dashboard():
 @app.route("/credit/docelement_document", methods=['POST'])
 def docelement_upload_document():
 
-    extraction_service_id = "711eb617-dc63-4e8c-93c7-506227c2e650"
-    response, status, token = indone_auth(extraction_service_id, request)
+    try:
+        # Validating Token
+        response, status,_ = verify_token(request)
+        if status != 1:
+            return jsonify(response), status
+        print("Cheking User Dashboard  ")
+        current_user = response['user_email']
+        data = request.get_json()
+        print("dataaa",data)
+        file_path = data['file_path']
+        img_dir_path = data['img_dir_path']
+        model_type = "stage_2" ; ocr_type = "google_ocr" ; password = ""
+        print(password,type(password))
+        password = ''
+        print("filees\n",file_path,img_dir_path,ocr_type,password)
+        response = docModel_stage2.capture_object(file_path,img_dir_path,ocr_type,password)
 
-    if status != 1 :
-        return jsonify(response), 401
-    content_type = request.content_type
-    if 'json' in content_type:
-        try:
-            data = request.get_json()
-            file_path = data['file_path']
-            img_dir_path = data['img_dir_path']
-            model_type = "stage_2" ; ocr_type = "google_ocr" ; password = b""
-            print(password,type(password))
-            if 'resp_format' in data:
-                resp_format=data['resp_format']
-            else:
-                resp_format='json'
-            if 'password' in data:
-                password = data['password']
-            else:
-                password = ''
-            # print("pa")
-            if model_type=='stage_1':
-                response=docModel_stage1.capture_object(file_path,img_dir_path,ocr_type,password,resp_format)
-                # if a==0:
-                #     return "Successfully captured",200
-                # else:
-                #     return "Not Captured", 415
-            else:                
-                response=docModel_stage2.capture_object(file_path,img_dir_path,ocr_type,password,resp_format)
-                # if a==0:
-                #     return "Successfully captured",200
-                # else:
-                #     return "Not Captured", 415 
-            return jsonify(eval(str(response))), 200              
+        return jsonify(eval(str(response))), 200              
              
             
-        except Exception as e: 
-            print(traceback.print_exc())                                             
-            return jsonify({'message': 'Not captured'}), 415
+    except Exception as e: 
+        print(traceback.print_exc())                                             
+        return jsonify({'message': 'Not captured'}), 415
 
 ###############################################################################################
 
@@ -172,73 +156,76 @@ def credit_upload_document():
         try:
             start_time = time.time()
             pdf_file_name = file_name.split('/')[-1].split('.')[0]
-            model_type = "stage_2" ; ocr_type = "google_ocr" ; password = ''  
+            model_type = "stage_2" ; ocr_type = "google_ocr" ; password = '' 
+            print(file_path,folder_path) 
             response = docModel_stage2.capture_object(file_path,folder_path,ocr_type,password)
-            # print("RRRRRRRRRR",response)
-            if response:                
+            if response:                                    
                 xml_folder = folder_path + '/'+ pdf_file_name
                 pdf_file_name = xml_folder.split('/')[-1]
                 excel_file_path = xml_folder + '/' + pdf_file_name +'.xlsx'
-
-                json_file_path = xml_folder + '/' + pdf_file_name +'.json'
-                # with open ("SSSSSS.json", 'w') as file:
-                    # file.write(json.dumps(eval(str(response)), indent=3))
                 excel_file_path = excel_file_path.split('credit_app')[-1]
                 straight_flag=0
                 try:
-                    result_response,textfield_list=extraction_results(response,json_file_path)
-                    credit_db.update_job_details(excel_file_path,result_response,json_file_path,job_id,"To be Reviewed")
-                    if result_response!= -2:
-                        print("upload response",result_response)    
-                        straight_response=straight_through(result_response)
-                        # print(textfield_list)
+                    error_response, textfield_list, extracted_data = extraction_results(response)
+                    print(type(extracted_data))
+                    with open ("Response.json", 'w') as file:
+                        file.write(json.dumps(eval(str(extracted_data)), indent=3))
+                    extracted_data1 = json.load(open ("Response.json"))
+
+                    # extracted_data=json.dumps(eval(str(extracted_data)),indent=3)
+                    add_record_status = credit_db.addRecord_Db(extracted_data1,job_id,emailid)
+                    if add_record_status == -2:
+                        credit_db.update_job_details(excel_file_path,error_response,job_id,"Failed")
+                        credit_db.insert_textfield(job_id,{})
+                        credit_db.addRecord_Db({},job_id,emailid)
+                        return jsonify({'message': 'Not successful!','straight_through':0}), 400
+                    credit_db.update_job_details(excel_file_path,error_response,job_id,"To be Reviewed")
+                    if error_response!= -2:
+                        print("upload response",error_response)    
+                        straight_response=straight_through(error_response)
                         textfield_values={}
                         for i in textfield_list:
                             textfield_values[i['label']]=i['value']
                         print("textfield_values\n",textfield_values)
                         credit_db.insert_textfield(job_id,textfield_values)
+
+                        # Straight Through Processing
                         if straight_response==1:
                             straight_flag=1
-                            with open(json_file_path, "r") as filee:
-                                data=json.load(filee)
-                            data_ = {"job_id":job_details['job_id'], "response":data}
+                            data_ = {"job_id":job_details['job_id'], "response":extracted_data1}
                             auth_headers = request.headers.get('Authorization')
                             response_ = requests.post(url_digitize, headers={"Authorization":auth_headers,'Content-Type':'application/json'}, data=json.dumps(data_))
-                            
                             if response_.status_code != 200:
                                 return response_.json(), response_.status_code
                             else:
-                                credit_db.update_job_details(excel_file_path,result_response,json_file_path,job_id,"Straight Through Processed")
+                                credit_db.update_job_details(excel_file_path,error_response,job_id,"Straight Through Processed")
 
-                        # print(">>>>>>>>>>",json_file_path)
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
-                        return jsonify({'message':'Successful!','straight_through':straight_flag,'job_id': job_id,"json":json_file_path}), 200
+                        return jsonify({'message':'Successful!','straight_through':straight_flag,'job_id': job_id}), 200
                     else:
-                        credit_db.update_job_details(excel_file_path,result_response,json_file_path,job_id,"Failed")
+                        credit_db.update_job_details(excel_file_path,error_response,job_id,"Failed")
                         credit_db.insert_textfield(job_id,{})
                         print(f'\n ++++++ Time Complexity for {pdf_file_name} is {time.time() - start_time} +++++++\n')
-                        return jsonify({'message':'Not Successful!','straight_through':0,'job_id': job_id,"json":json_file_path}), 400
+                        return jsonify({'message':'Not Successful!','straight_through':0,'job_id': job_id}), 400
                 except Exception as e: 
                     print(traceback.print_exc())       
-                    json_file_path = "NA"
                     excel_file_path="NA"
                     credit_db.insert_textfield(job_id,{})
 
-                    credit_db.update_job_details(excel_file_path,"extraction failed",json_file_path,job_id,"Failed")
+                    credit_db.update_job_details(excel_file_path,"extraction failed",job_id,"Failed")
 
-                    return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id, "json":json_file_path}), 400
+                    return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id}), 400
             else:
                 credit_db.insert_textfield(job_id,{})
                 return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id': job_id}), 400
         except Exception as e: 
             print(traceback.print_exc())       
-            json_file_path = "NA"
             excel_file_path="NA"
             credit_db.insert_textfield(job_id,{})
 
-            credit_db.update_job_details(excel_file_path,"something failed",json_file_path,jobid_counter,"Failed")
+            credit_db.update_job_details(excel_file_path,"something failed",jobid_counter,"Failed")
             
-            return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id, "json":json_file_path}), 400
+            return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id}), 400
     except Exception as e:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!','straight_through':0}), 401
@@ -256,15 +243,12 @@ def ui_validation():
             current_user = response['user_email']
             job_response = credit_db.ui_validation(current_user,data['job_id'])
             desc_list=get_desc_keys()
-            print("*****",desc_list)
             desc_list.append("Others")
             print(desc_list)
             if job_response != -2:      
                 image_folder_path=job_response['folder_path'].split('credit_app')[1]
                 no_images = len(glob.glob(job_response['folder_path']+'/*.jpg'))
-                print(job_response)
-                json_file_path=job_response['json_file_path'].split('credit_app')[1]
-                return jsonify({'message': 'Successful!','description_type':desc_list,'filename':[job_response['filename']],'json_ref':[json_file_path],'images_folder_path':[image_folder_path]  ,"images_count":[no_images] }), 200
+                return jsonify({'message': 'Successful!','description_type':desc_list,'filename':[job_response['filename']],'json_ref':[data['job_id']],'images_folder_path':[image_folder_path]  ,"images_count":[no_images] }), 200
             else:
                 return jsonify({'message': 'Not successful!'}), 201
     except:
@@ -284,14 +268,17 @@ def credit_review_document():
             current_user = response['user_email']
             
             job_id = data['job_id']
-            job_response = credit_db.review_document(current_user,data['job_id'],data['filename'])
-            with open(job_response['json_file_path'], "r") as json_file:
-                data=json.load(json_file)
+            # job_response = credit_db.review_document(current_user,data['job_id'],data['filename'])
+            job_response = credit_db.getValidatedData_Db(current_user,data['job_id'])
+            # print(job_response['status'])
+            # print(job_response)
 
-            # json_file_path=job_response['json_file_path'].split('credit_app')[1]
-            return jsonify({'message': 'Successful!','data':data }), 200
-        else:
-            return jsonify({'message': 'Not successful!'}), 201
+            # print()
+            if job_response['status']==1:
+                print(job_response['data'])
+                return jsonify({'message': 'Successful!','data':job_response['data'] }), 200
+            else:
+                return jsonify({'message': 'Not successful!'}), 201
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
@@ -310,17 +297,20 @@ def credit_digitize_document():
             current_user = response['user_email']
             
             job_id = data['job_id']
-            folder_path,excel_file_path = credit_db.digitize_document(current_user,job_id,data['response'])
-            print('excel_file_path',excel_file_path)            
-            df_list_new,textfield_dict = json_to_excel(data['response'])
-            # print('df_list_new',df_list_new)
-            final_excel_path=analysis(excel_file_path,df_list_new,textfield_dict)
-            print("****************** Digitize completed")
-            final_excel_path = final_excel_path.split('credit_app')[1]
-            credit_db.update_calculation_job(excel_file_path,job_id,final_excel_path)
-            # return jsonify({'message': 'Successful!'}) ,200
-            return jsonify({'message': 'Successful!','final_file_path':final_excel_path}), 200
-
+            folder_path,excel_file_path = credit_db.digitize_document(current_user,job_id)
+            print('excel_file_path',excel_file_path)  
+            response=credit_db.updateValidatedData_Db(data['response'],job_id,current_user)          
+            if response==0:
+                df_list_new,textfield_dict = json_to_excel(data['response'])
+                # print('df_list_new',df_list_new)
+                final_excel_path=analysis(excel_file_path,df_list_new,textfield_dict)
+                print("****************** Digitize completed")
+                final_excel_path = final_excel_path.split('credit_app')[1]
+                credit_db.update_calculation_job(excel_file_path,job_id,final_excel_path)
+                # return jsonify({'message': 'Successful!'}) ,200
+                return jsonify({'message': 'Successful!','final_file_path':final_excel_path}), 200
+            else:
+                return jsonify({'message': 'Not successful!'}), 201
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201

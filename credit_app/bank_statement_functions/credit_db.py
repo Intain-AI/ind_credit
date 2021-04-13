@@ -4,21 +4,26 @@ import os,json
 from flask import jsonify
 from config import IND_EMAIL,IND_PASSWD,BASE_URL
 from config import  IND_CREDIT_MONGODB_URL,IND_CREDIT_MONGODB_PORT,IND_CREDIT_MONGODB_NAME
-
+import datetime
+import time
 import smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from uuid import uuid4
 
-from datetime import datetime
+
+# from datetime import datetime
 from pytz import timezone
 
 uri = "mongodb://{}:{}/{}".format(IND_CREDIT_MONGODB_URL, IND_CREDIT_MONGODB_PORT,IND_CREDIT_MONGODB_NAME)
+# uri = "mongodb+srv://12345:12345@cluster0.thhvq.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
 mongo_db_client = MongoClient(uri)
 db = mongo_db_client[IND_CREDIT_MONGODB_NAME]
 
 collection_job = db['job_detail']
 collection_token = db['token_detail']
+collection_extracted = db['extracted_data']
+collection_validated = db["validated_data"]
 
 ########################################################################################################################
 def delete_null_job(request_email):
@@ -29,21 +34,6 @@ def delete_null_job(request_email):
             'job_status': 'NULL'
         })
     mongo_db_client.close()
-
-########################################################################################################################
-def get_token(request_data):
-
-    resp = collection_token.find_one(({'token': request_data['token']}))
-    if resp:
-        resp_new = collection_token.find_one(({'emailid': resp['emailid']}))
-        secret_key = resp_new['secretkey']
-        email_id = resp_new['emailid']
-    else:
-        mongo_db_client.close()   
-        return -2
-
-    mongo_db_client.close()
-    return {'emailid': email_id, 'secretkey': secret_key}
 
 
 #######################################################################################################################
@@ -126,7 +116,7 @@ def review_document(request_email,job_id,filename):
         mongo_db_client.close()
         return -2
 ########################################################################################################################
-def digitize_document(request_email,job_id,json_response):
+def digitize_document(request_email,job_id):
     #pprint.pprint(request_data)
 
     job_response = collection_job.find_one(
@@ -141,11 +131,6 @@ def digitize_document(request_email,job_id,json_response):
     
     if job_response:  
         mongo_db_client.close()
-        json_file_path = job_response['json_file_path']
-        with open (json_file_path, 'w') as file:
-            print("::::Updated Json File :::",json_file_path)
-            file.write(json.dumps(eval(str(json_response)), indent=3))
-
         return (job_response['folder_path'],job_response['excel_file_path'])
     else:
         mongo_db_client.close()
@@ -211,9 +196,9 @@ def get_jobid(request_email):
 #         return -2
 
 ########################################################################################################################
-def update_job_details(excel_file_path,response,json_file_path,job_id,message):
+def update_job_details(excel_file_path,response,job_id,message):
     try:
-        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status':message,'excel_file_path':excel_file_path,'json_file_path':json_file_path,'response':response}})
+        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status':message,'excel_file_path':excel_file_path,'response':response}})
         mongo_db_client.close()
         return 
     except:
@@ -277,3 +262,107 @@ def update_jobstatus(request_email, request_jobid, request_status):
     except:
         print(traceback.print_exc())
         return -2
+
+
+def addRecord_Db(file_json,job_id,email_id):
+    '''
+    Input
+    job_id >> Int
+    file_json >> dict
+    email_id >> string
+    
+    Output >> status 0 for success and -2 for failure
+    '''
+    # if not isinstance(file_json, dict):
+        # raise TypeError(f"file_json must be a Dict!! found {type(file_json)}")
+
+    try:
+        query={}
+        query['job_id']=job_id
+        query['email_id']=email_id
+        
+        date_format = "%Y-%m-%d %H:%M"
+        now_utc = datetime.datetime.now(timezone('UTC'))
+        now_asia = now_utc.astimezone(timezone('Asia/Kolkata'))
+        query['upload_dateTime'] = now_asia.strftime(date_format)
+        
+        collection_extracted.update_one(query,{'$set':{"data":file_json}},upsert=True)
+        collection_validated.update_one(query,{'$set':{"data":file_json}},upsert=True)
+        mongo_db_client.close()
+        return 0
+    except:
+        print(traceback.print_exc())
+        return -2
+
+
+def updateValidatedData_Db(file_json,job_id,email_id):
+    '''
+    Input
+    job_id >> Int
+    file_json >> dict
+    email_id >> string
+    
+    Output >> status 0 for success and -2 for failure
+    '''
+
+    if not isinstance(file_json, dict):
+        raise TypeError(f"file_json must be a Dict {type(file_json)}")
+
+    try:
+        query={}
+        query['job_id']=job_id
+        query['email_id']=email_id
+
+        date_format = "%Y-%m-%d %H:%M"
+        now_utc = datetime.datetime.now(timezone('UTC'))
+        now_asia = now_utc.astimezone(timezone('Asia/Kolkata'))
+        updated_dateTime = now_asia.strftime(date_format)
+        collection_validated.update_one(query,{'$set':{'data':file_json,'updated_dateTime':updated_dateTime}},upsert=True)
+        mongo_db_client.close()
+        return 0
+    except:
+        print(traceback.print_exc())
+        return -2
+
+
+def deleteRecord_Db(uid, collection):
+    '''
+    Input
+    uid >> String
+    collection >> database collection
+    
+    Output >> status 1 for success and 0 for failure
+    '''
+    if not isinstance(uid, str):
+        raise TypeError(f"uid must be a string!! found {type(uid)}")
+
+    try:
+        query = {}
+        query["uid"] = uid
+        collection.delete_one(query)
+        return {"status":1}
+    except:
+        print(traceback.print_exc())
+        return {"status":0}
+
+
+def getValidatedData_Db(email_id,job_id):
+    '''
+    Input
+    uid >> String
+    collection >> database collection
+    
+    Output
+    data >> json of data 
+    status 1 for success and 0 for failure
+    '''
+    try:
+        query={}
+        query['job_id']=job_id
+        query['email_id']=email_id
+        response = collection_validated.find_one(query)
+        return {"data":response['data'],"status":1}
+
+    except:
+        print(traceback.print_exc())
+        return {"data":{},"status":0}

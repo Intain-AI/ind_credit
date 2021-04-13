@@ -74,7 +74,7 @@ def analysis(excel_file_path,df_list_new,textfield_dict):
     final_excel_path = '/'.join(excel_file.split('/')[:-2]) + '/' + excel_file.split('/')[-1]
        
     final_df = pd.concat(df_list_new,ignore_index=True)
-    final_df.drop_duplicates(keep='first',inplace=True) 
+    final_df.drop_duplicates(keep='first',inplace=True)
     final_df.to_excel(final_excel_path,header = True,index = False,sheet_name='Transaction_data')
     get_transaction_analysis(final_df,final_excel_path,textfield_dict) 
 

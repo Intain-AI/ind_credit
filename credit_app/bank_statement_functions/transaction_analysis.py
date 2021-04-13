@@ -11,33 +11,10 @@ def preprocessing(df):
     df['Balance'] = df['Balance'].apply(np.float64)
     return df
 
-def guess_date(string):
-    date_formats = ["%Y/%m/%d",   # 2017/5/23 or 2017/05/23
-                    "%d/%m/%Y",   # 22/04/2015
-                    "%Y%m%d",     # 20150504
-                    "%d-%m-%Y",   # 22-04-2015
-                    "%Y-%m-%d",   # 2015-04-23
-                    "%d/%m/%y",   # 05/03/18
-                    '%d %b %Y',   # 23 Apr 2020
-                    '%d%b%Y',     # 23Apr2020
-                    '%d%B%Y',     # 23April2020
-                    '%d %b %y',   # 23 Apr 20
-                    '%d %B %y',   # 23 April 20
-                    '%d %B %Y',   # 23 April 2020
-                    '%d-%b-%y',   # 23-Apr-20
-                    '%d-%b-%Y']   # 23-Apr-2020
-                    
-    for fmt in date_formats:  
-        try:
-            return datetime.strptime(string, fmt).date()
-        except:
-            continue
     # raise ValueError(string)
 
 def get_correct_date(df):
-    # print("$$$$$$$$\n",df)
-    samples = df['Date'].tolist()
-    df['Date'] = [guess_date(sample.strip()) for sample in samples]
+    # df['Date'] = [guess_date(sample.strip()) for sample in samples]
     df.sort_values(by=['Date'], inplace=True)
     # print(df)
     return df
@@ -58,13 +35,16 @@ def monthly_avg_bal(df,excel_file_path):
     # df['Date'] = df['Date'].apply(lambda x: datetime.strptime(str(x), '%d/%m/%y').date())
     
     df[["year", "month", "day"]] = df["Date"].apply(str).str.split("-", expand=True)
+    # print("monthly average baala",df,type(df["Date"][0]))
     agg_date = df.groupby(['year','month','day']).nth(-1)
     df_new = agg_date.filter(['Date','Balance'])
     all_days = pd.date_range(df_new.Date.min(), df_new.Date.max(), freq='D')
+    all_days=[i.strftime('%Y-%m-%d') for i in all_days]
     df_date = df_new.set_index('Date').reindex(all_days).fillna(method='ffill').rename_axis('Date').reset_index()
     df_date["Date"] = pd.to_datetime(df_date["Date"]).apply(lambda x: x.date())
     with pd.ExcelWriter(excel_file_path, engine='openpyxl', mode='a') as writer:  
         df_date.to_excel(writer, sheet_name = 'EOD Balances')
+    print(df_date)
     df_date[["year", "month", "day"]] = df_date["Date"].apply(str).str.split("-", expand=True)
     agg_date = df_date.groupby(['year','month'])['Balance'].mean()
     # print(agg_date.columns)
@@ -79,7 +59,7 @@ def monthly_avg_bal(df,excel_file_path):
 def get_transaction_analysis(df,final_excel_path,textfield_dict):
     # df = pd.read_excel(excel_file_path,sheet_name="Transaction_data",engine='openpyxl')
     # df = rename_header(df)
-    df = get_correct_date(df)
+    # df = get_correct_date(df)
     df2 = df.copy(deep = True)
     mab = monthly_avg_bal(df2,final_excel_path)
     get_salary_df(final_excel_path)

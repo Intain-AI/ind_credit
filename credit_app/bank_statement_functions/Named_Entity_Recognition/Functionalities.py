@@ -34,6 +34,5 @@ def find_coordinates(sentences,text_list,word):
             text=sentences[i][j]['text']
             text=preprocess(text)
             if(text==word):
-                coordinates={"top":sentences[i][j]['top'],"left":sentences[i][j]['left'],"width":sentences[i][j]['width'],"height":sentences[i][j]['height']}
-             
+                coordinates={"top":sentences[i][j]['top'],"left":sentences[i][j]['left'],"width":sentences[i][j]['width'],"height":sentences[i][j]['height']} 
                 return(text_list[i]['token'][j]['id'],text_list[i]['id'],coordinates)
