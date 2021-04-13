@@ -3,7 +3,7 @@ import numpy as np
 import re
 from datetime import datetime
 import os,json,traceback
-from .calculations import empty_values
+from .functions import desc_dict
 
 def preprocessing(df):
     # print("++++++++++++++++++++++\n",df)
@@ -54,6 +54,29 @@ def monthly_avg_bal(df,excel_file_path):
     mab = agg_date.mean()
     return mab
 
+def chart_calculations(df):
+    # print("chart calculations\n\n",df)
+    chart_dict={}
+    key_list=[]
+    for key in desc_dict:
+        key_list.append(key)
+    key_list.append('Others')
+    try:
+        for key in key_list:
+            c=df[df['Transaction_Type']==key]
+            chart_dict['No of'+' '+key+' '+'Transactions']=c.shape[0]
+            credit_list=list(c['Credit'])
+
+            amount_credited=sum(np.array(credit_list, dtype=np.float64, order='C'))
+            debit_list=list(c['Debit'])
+            amount_debited=sum(np.array( debit_list,dtype=np.float64, order='C'))
+            chart_dict['Amount of'+' '+key+' '+'Credited']=amount_credited
+            chart_dict['Amount of'+' '+key+' '+'Debited']=amount_debited
+        return(chart_dict)
+    except:
+        print(traceback.print_exc())
+        return {}
+
 
 
 def get_transaction_analysis(df,final_excel_path,textfield_dict):
@@ -64,7 +87,7 @@ def get_transaction_analysis(df,final_excel_path,textfield_dict):
     mab = monthly_avg_bal(df2,final_excel_path)
     get_salary_df(final_excel_path)
     dict_values = credit_debit(df,final_excel_path)
-    trans_type_dict=empty_values()
+    trans_type_dict=chart_calculations(df)
     # trans_type_dict = transaction_type_analysis(final_excel_path)
     cal_dict = {'Monthly Average Balance': mab}
     print('textfield_dict',textfield_dict)
@@ -87,10 +110,9 @@ def get_transaction_analysis(df,final_excel_path,textfield_dict):
         # salary_df.to_excel(writer, sheet_name = 'Salary Calculations')
 
 def pie_chart(df,Type):
-    print(Type)
     type_df=df[(df[Type].notnull()) ]
     df_filter = type_df.filter(['Transaction_Type',Type])
-    df_filter[Type] = df_filter[Type].apply(lambda x:re.sub('[^0-9.]','',x))
+    # df_filter[Type] = df_filter[Type].apply(lambda x:re.sub('[^0-9.]','',x))
     df_filter[Type] = df_filter[Type].apply(np.float64)
     df_group=df_filter.groupby(['Transaction_Type'])
     df_sum=df_group.sum()

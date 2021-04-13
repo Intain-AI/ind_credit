@@ -9,7 +9,7 @@ def nerOutput(word,tag,sentences,text_list):
     try:
         IOB_tags=['B_ACC_NUMBER', 'I_ACC_NUMBER', 'B_ACC_HOLDER_NAME', 'I_ACC_HOLDER_NAME', 'B_IFSC_CODE','I_IFSC_CODE', 'B_EMAIL_ID','I_EMAIL_ID',  'B_ACC_OPEN_DATE', 'I_ACC_OPEN_DATE', 'B_JOINT_HOLDERS', 'I_JOINT_HOLDERS']
         classes=["account_number","account_holder_name","ifsc_code","email_id","ac_open_date","joint_holders"]
-        label=["Account Number","Account Holder","IFSC Code","Email ID","Account Open Date","Joint Holders"]
+        label=["Account Number","Account Holder","IFSC Code","Email ID","Account Opening Date","Type of Account"]
 
         re=[]
         extracted_fields=[]

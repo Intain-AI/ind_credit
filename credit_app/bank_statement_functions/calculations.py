@@ -5,7 +5,7 @@ from datetime import datetime
 import os,json,traceback
 from .response import textfield_list
 from .Named_Entity_Recognition.NER_Extractor import nerMain
-from .functions import empty_values,change_column_name,preprocess_amount,preprocess_date,transaction_type_description,guess_date,get_blank_coordinates,add_blank_col,balance_column_check,validate_column_header,add_dictionary
+from .functions import change_column_name,preprocess_amount,preprocess_date,transaction_type_description,guess_date,get_blank_coordinates,add_blank_col,balance_column_check,validate_column_header,add_dictionary,debit_credit_mix
 
 mandatory_columns=['Date','Description','Credit','Debit','Balance']
 desc_remove=['brought forward','carried forward','closing balance','transaction total']
@@ -65,6 +65,7 @@ def extraction_results(data):
         # dict_bank=get_logical_text(data) # Rule Based Extraction
         dict_bank = nerMain(data) # NER Based Extraction
         others_error={}
+        print("DICT DATA"*20)
         print(dict_bank)
         column_list=[]
         error_whole=[]
@@ -78,7 +79,8 @@ def extraction_results(data):
             error_date_key=[]
             extraction_results={}
             digitized_details=data['result'][key]['digitized_details']
-            #     print(data['result'][key])
+            # print("HETE"*30)
+            # print(data['result'][key])
             if digitized_details['table_cells']:
                 print(key)
                 for tables in digitized_details['table_cells']:
@@ -92,7 +94,8 @@ def extraction_results(data):
                     #finding header and renaming it.
                     if found_header==0:
                         new_column=sorted(tables['rows'][0]['cells'], key = lambda i: i['columnNo'])
-                        # print("*****\n\n",new_column)
+                    
+                        print("**NEW COLUM***\n\n",new_column)
                         lst = []
                         for i in new_column:
                             lst.append(int(i['columnNo']))
@@ -105,6 +108,9 @@ def extraction_results(data):
                         print("Coluuuuumn list",column_list)
                         column_index=validate_column_header(column_list,error_header)
                         print("column index",column_index)
+                        # Checking for Debit and Credit column Mix
+                        # column_list = debit_credit_mix(column_list)
+                        
                         found_header=1
                         if 0 in column_index.values():
                             error['header']=1

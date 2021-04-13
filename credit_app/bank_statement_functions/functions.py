@@ -26,16 +26,16 @@ header_dict = {'Description': ['description','transaction description','account 
 'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit amount','deposit cr','deposits in rs.','deposit amount inr'],
 'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance amount','balance inr','balance in rs.','balance amount inr']}
 
-def empty_values():
-    dict_empty_type={}
-    for key in desc_dict:
-        dict_empty_type['No of '+key+' Transactions']=0  
-    # print(dict_empty_type)
-    dict_empty_type['No of Other Transactions']=0  
-    return(dict_empty_type)
-    # df={'No of Auto Debit Transactions':0,
-    # 'No of Debit Card Transactions':0,
-    # ''}
+# def empty_values():
+#     dict_empty_type={}
+#     for key in desc_dict:
+#         dict_empty_type['No of '+key+' Transactions']=0  
+#     # print(dict_empty_type)
+#     dict_empty_type['No of Other Transactions']=0  
+#     return(dict_empty_type)
+#     # df={'No of Auto Debit Transactions':0,
+#     # 'No of Debit Card Transactions':0,
+#     # ''}
 
 
 def get_desc_keys():
@@ -229,3 +229,8 @@ def validate_column_header(column_list,error_header):
     return column_index
 
 
+db_mix_list = ["Withdrawal Dr / Deposit Cr", "Debit/Credit"]
+def debit_credit_mix(column_list, error_header):
+    
+    pass
+    

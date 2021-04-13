@@ -352,6 +352,12 @@ def credit_e2EProcessing():
 
 
     auth_headers = request.headers.get('Authorization')
+    if request.method == 'POST':           
+        response, status,_ = verify_token(request)
+    if status != 1:
+        return jsonify(response), status
+    current_user = response['user_email']
+
     file = request.files["file"]
     fileData = {'file':(file.filename, file.stream, file.content_type, file.headers)}
     
@@ -372,44 +378,40 @@ def credit_e2EProcessing():
     
     job_id = response.json()["job_id"]
 
-    json_file = response.json()["json"]
+    if response.status_code==200 and response.json()['straight_through']==1:
+        # current_user = response['user_email']
+        print(current_user)
+        excel_path=credit_db.get_excel(current_user,job_id)
+        complete_file = os.getcwd() + "/credit_app" +excel_path
+        try:
+            balance_sheet = pd.read_excel(complete_file, sheet_name = "Salary Calculations")
+            salary = balance_sheet["Balance"].apply(np.float64).mean()
+        except:
+            salary = 0
 
-    with open(json_file, "r") as filee:
-        data=json.load(filee)
-    
-    data_ = {"job_id":job_id, "response":data}
-    response_ = requests.post(url_digitize, headers={"Authorization":auth_headers,'Content-Type':'application/json'}, data=json.dumps(data_))
+        calculation_sheet = pd.read_excel(complete_file, sheet_name = "Calculations")
+        final1=dict(calculation_sheet.values)
+        # final={}
+        keys_to_extract = ['Account Holder', "Account Number","IFSC Code","Account Opening Date","Monthly Average Balance","Type of Account"]
 
-    if response_.status_code != 200:
+        final = {key: final1[key] for key in keys_to_extract}
+
+        # final[]=final1['Account Holder']
+        # final = calculation_sheet.to_dict(orient='records')[0]
+        final["Average Salary"] = salary
+        final["Type of Account"] = "Individual Account"
+        final["Processing Type"] = "Straight Through Processed"    
+        # final = calculation_sheet.to_dict(orient='records')[0]
+        # final["Total Salary"] = salary
+
+        return jsonify(final), 200
+
+
+    else:
         textfields=credit_db.get_textfields(job_id)
         print(textfields)
         textfields["Type of Account"] = "Individual Account"
         textfields["Processing Type"] = "Manual Intervention Required"
         return textfields
     
-    file_path = response_.json()["final_file_path"]
-    complete_file = os.getcwd() + "/credit_app" +file_path
-    print(complete_file)
-    try:
-        balance_sheet = pd.read_excel(complete_file, sheet_name = "Salary Calculations")
-        salary = balance_sheet["Balance"].apply(lambda x:re.sub('[^0-9.]','',x)).astype(float).mean()
-    except:
-        salary = 0
-
-    calculation_sheet = pd.read_excel(complete_file, sheet_name = "Calculations")
-    final1=dict(calculation_sheet.values)
-    # final={}
-    keys_to_extract = ['Account Holder', "Account Number","IFSC Code","Acount Opening Date","Monthly Average Balance"]
-
-    final = {key: final1[key] for key in keys_to_extract}
-
-    # final[]=final1['Account Holder']
-    # final = calculation_sheet.to_dict(orient='records')[0]
-    final["Average Salary"] = salary
-    final["Type of Account"] = "Individual Account"
-    final["Processing Type"] = "Straight Through Processed"    
-    # final = calculation_sheet.to_dict(orient='records')[0]
-    # final["Total Salary"] = salary
-
-    return jsonify(final), 200
-
+    
