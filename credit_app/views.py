@@ -275,7 +275,6 @@ def credit_review_document():
 
             # print()
             if job_response['status']==1:
-                print(job_response['data'])
                 return jsonify({'message': 'Successful!','data':job_response['data'] }), 200
             else:
                 return jsonify({'message': 'Not successful!'}), 201
@@ -380,7 +379,6 @@ def credit_e2EProcessing():
 
     if response.status_code==200 and response.json()['straight_through']==1:
         # current_user = response['user_email']
-        print(current_user)
         excel_path=credit_db.get_excel(current_user,job_id)
         complete_file = os.getcwd() + "/credit_app" +excel_path
         try:
