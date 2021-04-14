@@ -51,9 +51,10 @@ def validate_columns(row_list,column_index,error,credit_list,debit_list,balance_
                         error['date']=1
                         # print("else date error",date,index)
                         date_error.append(index)
+                        print("date error else",index)
                 except:
                     error['date']=1
-                    print("date error",index)
+                    print("date error except",index)
                     date_error.append(index)
     return (row_list,error,credit_list,debit_list,balance_list,date_list,date_error)
 
@@ -142,9 +143,10 @@ def extraction_results(data):
                         row_list = sorted(row_list, key = lambda i: i['columnNo'])
                         date_error=[]
                         date_list=[]
-                        row_list,error,credit_list,debit_list,balance_list,date_list,date_error=validate_columns(row_list,column_index,error,credit_list,debit_list,balance_list,date_list,date_error)
-                        error_date_key.append(date_error)
-                        row_list1.append(row_list)
+                    row_list,error,credit_list,debit_list,balance_list,date_list,date_error=validate_columns(row_list,column_index,error,credit_list,debit_list,balance_list,date_list,date_error)
+                    error_date_key.append(date_error)
+                    print("date error"*4,date_error)
+                    row_list1.append(row_list)
                     if len(credit_list)!=0 and len(debit_list)!=0 and len(balance_list)!=0: 
                         if error['date']==0:
                             error,balance_error=balance_column_check(date_list,credit_list,debit_list,balance_list,error)
@@ -159,12 +161,13 @@ def extraction_results(data):
                     error_key.append(error)
                     tabledata.append({'columns':column_list,'mandatory_columns':mandatory_columns,'data':row_list1,"row_coordinates":row_coordinates_list,"column_coordinates":tables['column_cords']})
                 
-                extraction_results["tabledata"]=tabledata
-                error_whole.append(error_key)
+            extraction_results["tabledata"]=tabledata
+            error_whole.append(error_key)
             if key=="Page_1":
                 extraction_results["fields"]=True
             else:
                 extraction_results["fields"]=False
+            print("error date key"*4,error_date_key)
             data['result'][key]['extraction_results']=extraction_results
             data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key,'date':error_date_key}}    
         data['result']['header_fields']=dict_bank

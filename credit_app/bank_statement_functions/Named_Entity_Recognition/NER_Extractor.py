@@ -146,7 +146,7 @@ def nerMain(data):
     try:
         text_list,sentences,tokens=process_input_file(data)
         word,tag=predict_input(tokens)
-        # print(word,tag)
+        print(word,tag)
         result=nerOutput(word,tag,sentences,text_list)
         final_result=ruleBasedNER(result,text_list)
         return final_result

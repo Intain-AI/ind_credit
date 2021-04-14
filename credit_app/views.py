@@ -167,10 +167,11 @@ def credit_upload_document():
                 straight_flag=0
                 try:
                     error_response, textfield_list, extracted_data = extraction_results(response)
-                    print(type(extracted_data))
-                    with open ("Response.json", 'w') as file:
+                    # print(type(extracted_data))
+                    print(basedir+"/static/data/input/Response.json")
+                    with open (basedir+"/static/data/input/Response.json", 'w') as file:
                         file.write(json.dumps(eval(str(extracted_data)), indent=3))
-                    extracted_data1 = json.load(open ("Response.json"))
+                    extracted_data1 = json.load(open (basedir+"/static/data/input/Response.json"))
 
                     # extracted_data=json.dumps(eval(str(extracted_data)),indent=3)
                     add_record_status = credit_db.addRecord_Db(extracted_data1,job_id,emailid)
@@ -397,7 +398,6 @@ def credit_e2EProcessing():
         # final[]=final1['Account Holder']
         # final = calculation_sheet.to_dict(orient='records')[0]
         final["Average Salary"] = salary
-        final["Type of Account"] = "Individual Account"
         final["Processing Type"] = "Straight Through Processed"    
         # final = calculation_sheet.to_dict(orient='records')[0]
         # final["Total Salary"] = salary
@@ -408,7 +408,6 @@ def credit_e2EProcessing():
     else:
         textfields=credit_db.get_textfields(job_id)
         print(textfields)
-        textfields["Type of Account"] = "Individual Account"
         textfields["Processing Type"] = "Manual Intervention Required"
         return textfields
     
