@@ -27,7 +27,7 @@ def validate_description(row_list,column_index,others_error,error,index):
             row_list.append(col_dict)
     return(row_list,others_error,error)
 
-def validate_columns(row_list,column_index,error,credit_list,debit_list,balance_list,date_list,date_error):
+def validate_columns(row_list,column_index,error,credit_list,debit_list,balance_list,date_list,date_error,row_index):
     for index,cols in enumerate(row_list):
         if column_index['Credit']!=0 and column_index['Debit']!=0 and column_index['Balance']!=0:  
             if cols['columnNo']==column_index['Credit']:
@@ -50,12 +50,12 @@ def validate_columns(row_list,column_index,error,credit_list,debit_list,balance_
                     else:
                         error['date']=1
                         # print("else date error",date,index)
-                        date_error.append(index)
-                        print("date error else",index)
+                        date_error.append(row_index)
+                        print("date error else",row_index)
                 except:
                     error['date']=1
-                    print("date error except",index)
-                    date_error.append(index)
+                    print("date error except",row_index)
+                    date_error.append(row_index)
     return (row_list,error,credit_list,debit_list,balance_list,date_list,date_error)
 
 def extraction_results(data):
@@ -65,7 +65,6 @@ def extraction_results(data):
         #     file.write(json.dumps(eval(str(data)), indent=3))
         # dict_bank=get_logical_text(data) # Rule Based Extraction
         dict_bank = nerMain(data) # NER Based Extraction
-        others_error={}
         print("DICT DATA"*20)
         print(dict_bank)
         column_list=[]
@@ -78,6 +77,7 @@ def extraction_results(data):
             error_others_key=[]
             error_balance_key=[]
             error_date_key=[]
+            
             extraction_results={}
             digitized_details=data['result'][key]['digitized_details']
             # print("HETE"*30)
@@ -91,6 +91,7 @@ def extraction_results(data):
                     debit_list=[]
                     balance_list=[]
                     date_list=[]
+                    date_error=[]
                     # row_list=[]
                     #finding header and renaming it.
                     if found_header==0:
@@ -111,18 +112,22 @@ def extraction_results(data):
                         print("column index",column_index)
                         # Checking for Debit and Credit column Mix
                         # column_list = debit_credit_mix(column_list)
-                        
+                        header_key=key
                         found_header=1
                         if 0 in column_index.values():
                             error['header']=1
-                    row_list1=[]
+                    all_rows_table=[]
                     row_coordinates_list=[]
                     print(column_list)
-                    for index in range(1,len(tables['rows'])):  
-                        row_list=[]              
-                        rows=tables['rows'][index]
+                    if header_key==key:
+                        start_index=1
+                    else:
+                        start_index=0
+                    for index in range(start_index,len(tables['rows'])):  
+                        current_row_list=[]              
+                        current_row=tables['rows'][index]
                         row_coordinates={}
-                        row_coordinates=add_dictionary(rows,['width','top','left','height','id','rowNo'])
+                        row_coordinates=add_dictionary(current_row,['width','top','left','height','id','rowNo'])
                         row_coordinates_list.append(row_coordinates)
                         for cells in tables['rows'][index]['cells']:
                             col_dict={}
@@ -133,20 +138,21 @@ def extraction_results(data):
                             col_dict['columnNo']= cells['columnNo']
                             col_dict['token']= cells['token']
                             col_dict['coordinates']=col_dict_coordinates
-                            row_list.append(col_dict)
+                            current_row_list.append(col_dict)
                         col_dict={}
                         if column_index['Description']!=0:
-                            row_list,others_error,error=validate_description(row_list,column_index,others_error,error,index)
-                        row_list = sorted(row_list, key = lambda i: i['columnNo'])
-                        # print("roooooow_list\n",row_list)
-                        row_list=add_blank_col(row_list,'word',len(column_list),0)
-                        row_list = sorted(row_list, key = lambda i: i['columnNo'])
-                        date_error=[]
-                        date_list=[]
-                    row_list,error,credit_list,debit_list,balance_list,date_list,date_error=validate_columns(row_list,column_index,error,credit_list,debit_list,balance_list,date_list,date_error)
+                            current_row_list,others_error,error=validate_description(current_row_list,column_index,others_error,error,index)
+                        current_row_list = sorted(current_row_list, key = lambda i: i['columnNo'])
+                        # print("roooooow_list\n",current_row_list)
+                        current_row_list=add_blank_col(current_row_list,'word',len(column_list),0)
+                        current_row_list = sorted(current_row_list, key = lambda i: i['columnNo'])
+
+                        current_row_list,error,credit_list,debit_list,balance_list,date_list,date_error=validate_columns(current_row_list,column_index,error,credit_list,debit_list,balance_list,date_list,date_error,index)
+                        # print("roooow list",current_row_list)
+                        all_rows_table.append(current_row_list)
                     error_date_key.append(date_error)
                     print("date error"*4,date_error)
-                    row_list1.append(row_list)
+                    
                     if len(credit_list)!=0 and len(debit_list)!=0 and len(balance_list)!=0: 
                         if error['date']==0:
                             error,balance_error=balance_column_check(date_list,credit_list,debit_list,balance_list,error)
@@ -159,7 +165,7 @@ def extraction_results(data):
                     error_others_key.append(others_error)
                     
                     error_key.append(error)
-                    tabledata.append({'columns':column_list,'mandatory_columns':mandatory_columns,'data':row_list1,"row_coordinates":row_coordinates_list,"column_coordinates":tables['column_cords']})
+                    tabledata.append({'columns':column_list,'mandatory_columns':mandatory_columns,'data':all_rows_table,"row_coordinates":row_coordinates_list,"column_coordinates":tables['column_cords']})
                 
             extraction_results["tabledata"]=tabledata
             error_whole.append(error_key)
