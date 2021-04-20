@@ -9,6 +9,7 @@ from functools import wraps
 import traceback
 import config
 import os
+import shutil
 import pandas as pd
 import shutil
 import glob
@@ -16,6 +17,8 @@ import json
 import requests
 import re
 import numpy as np
+from zipfile import ZipFile
+from os.path import basename
 
 from .bank_statement_functions.indone import verify_token,indone_auth
 from .bank_statement_functions.DocIdentifierProcessing import *
@@ -94,6 +97,12 @@ def docelement_upload_document():
         return jsonify({'message': 'Not captured'}), 415
 
 ###############################################################################################
+
+
+
+###############################################################################################
+
+
 
 @app.route("/credit/upload_document", methods=['POST'])
 def credit_upload_document():
@@ -315,6 +324,32 @@ def credit_digitize_document():
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
 
+########################################################################################################
+
+@app.route('/credit/zip_batch',methods=['POST'])
+def zip_batch():
+    data = request.get_json()
+    try:
+        if request.method == 'POST': 
+            response, status,_ = verify_token(request)
+            if status != 1:
+                return jsonify(response), status
+            current_user = response['user_email']
+            complete_file_list=[]
+            job_ids=data['job_id_list']
+            for job_id in job_ids:
+                excel_path=credit_db.get_excel(current_user,job_id)
+                complete_file_list.append(os.getcwd() + "/credit_app" +excel_path)
+            with ZipFile(basedir+"/static/data/input/Consolidated_excel.zip",'w') as zip:
+                for file in complete_file_list:
+                    print(file)
+                    zip.write(file,basename(file))
+            return jsonify({"message":"Successful","Zip_file":"/static/data/input/Consolidated_excel.zip"}),200
+    except:
+        print(traceback.print_exc())
+        return jsonify({"message":"Unsuccessful, Cannot Create Zip File"}),201
+########################################################################################################
+
 @app.route("/credit/graphs", methods=['POST'])
 def credit_graphs():
     data = request.get_json()
@@ -346,6 +381,8 @@ def credit_graphs():
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
+
+########################################################################################################
 
 @app.route("/credit/e2EProcessing", methods=['POST'])
 def credit_e2EProcessing():

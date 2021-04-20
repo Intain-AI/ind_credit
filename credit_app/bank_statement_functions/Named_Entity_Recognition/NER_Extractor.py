@@ -6,13 +6,15 @@ from .Functionalities import preprocess,process_input_file,find_coordinates
 import traceback
 import re
 import datefinder
-
+idd=60000
+import os
+import pandas as pd
 def nerOutput(word,tag,sentences,text_list):
     try:
         IOB_tags=['B_ACC_NUMBER', 'I_ACC_NUMBER', 'B_ACC_HOLDER_NAME', 'I_ACC_HOLDER_NAME', 'B_IFSC_CODE','I_IFSC_CODE', 'B_ACC_OPEN_DATE', 'I_ACC_OPEN_DATE', 'B_JOINT_HOLDERS', 'I_JOINT_HOLDERS']
         classes=["account_number","account_holder_name","ifsc_code","ac_open_date","joint_holders"]
         label=["Account Number","Account Holder","IFSC Code","Account Opening Date","Type of Account"]
-
+        global idd
         re=[]
         extracted_fields=[]
         for i in range(len(tag)):
@@ -28,6 +30,8 @@ def nerOutput(word,tag,sentences,text_list):
                 result["value"]=word[i]
                 result["varname"]=key    
                 result["logical_cell_position"]=logical_id
+                idd=idd+1
+                result['order_id']=idd
                 # if result['varname'] 
                 re.append(result)
 
@@ -43,6 +47,8 @@ def nerOutput(word,tag,sentences,text_list):
                 result["varname"]=classes[ind]
                 result["coordinates"]={"top":10,"left":10,"width":10,"height":10}
                 result["logical_cell_position"]=0
+                idd=idd+1
+                result['order_id']=idd
                 re.append(result)
         return re
     except:
@@ -53,7 +59,7 @@ def correct_date(date_string):
     try:
         matches = datefinder.find_dates(date_string)         
         match=list(matches)
-        print(match[0].strftime("%Y-%m-%d"))   
+        # print(match[0].strftime("%Y-%m-%d"))   
         return (match[0].strftime("%Y-%m-%d"))
     except:
         return 'NA'
@@ -80,7 +86,7 @@ def predict_input(sentences):
 
 def ruleBasedNER(result,text_list):
     text=""
-    print("Result",result)
+    # print("Result",result)
     for i in text_list:
         text=text+' '+(i['text'])
     # print("\n\n\ntextttt",text)
@@ -105,18 +111,18 @@ def ruleBasedNER(result,text_list):
         month_string='|'.join(months)
     i=text.find('account statement')
     if i!=-1:
-        print(text[i:i+200])
+        # print(text[i:i+200])
         date=correct_date(text[i:i+200])
         if date=='NA':
             month_list=re.findall(month_string,text[i:i+200].lower())
-            print("*******month list",month_list,text[i:i+200].lower())
+            # print("*******month list",month_list,text[i:i+200].lower())
             if month_list and dict_bank['ac_open_date']=='NA':
                 for j in month_list:
                     # print(j)
                     if dict_bank['ac_open_date']=='NA':
                         try:
                             dates=words[words.index(month_list[j])-1:words.index(month_list[j])+2]
-                            print(dates)
+                            # print(dates)
                             dict_bank['ac_open_date']=' '.join(dates)
                         except:
                             pass
@@ -138,7 +144,7 @@ def ruleBasedNER(result,text_list):
     if dict_bank['ac_open_date']=='NA':
         date=correct_date(text)
         dict_bank['ac_open_date']=date
-    print(dict_bank)
+    # print(dict_bank)
     for result_dict in result:
         result_dict['value']=dict_bank[result_dict['varname']]
     return result
@@ -146,7 +152,7 @@ def nerMain(data):
     try:
         text_list,sentences,tokens=process_input_file(data)
         word,tag=predict_input(tokens)
-        print(word,tag)
+        # print(word,tag)
         result=nerOutput(word,tag,sentences,text_list)
         final_result=ruleBasedNER(result,text_list)
         return final_result
@@ -157,7 +163,18 @@ def nerMain(data):
     
 if __name__=="__main__":
     # f = open('/home/credit/ind_credit/credit_app/static/data/input/bank_statement_2/E-HDFC_67/E-HDFC_67.json')
-    f = open('/home/credit/ind_credit/Response.json') 
-    json_data = json.load(f) 
-    resp = nerMain(json_data)
-    print(resp)
+    df=pd.DataFrame()
+    json_dir="/home/credit/JSON_files/"
+    for file in os.listdir(json_dir):
+        print(file)
+        f = open(json_dir+file) 
+        json_data = json.load(f) 
+        resp = nerMain(json_data)
+        dict_bank={}
+        for result_dict in resp:
+            dict_bank[result_dict['varname']]=result_dict['value']
+            dict_bank['file_name']=file
+        df=df.append(dict_bank,ignore_index=True)
+    print(df)
+    df.to_excel("NER_resp.xlsx")
+    # print(resp)
