@@ -377,7 +377,7 @@ def credit_graphs():
             card_list = [{"name":k, "value":v} for k, v in card_values.items()] 
 
             print(credit_sum,credit_count,debit_sum,debit_count)
-            return jsonify({'Credit':credit_list,'Debit':debit_list,'Cards':card_list,'Transactions':[{"Debit":debit_count_list,"Credit":credit_count_list}]}), 200
+            return jsonify({'message':'Successful','data':{'Credit':credit_list,'Debit':debit_list,'Cards':card_list,'Transactions':[{"Debit":debit_count_list,"Credit":credit_count_list}]}}), 200
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201
