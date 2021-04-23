@@ -29,6 +29,7 @@ from .bank_statement_functions.table_reconstruction import get_table_data,analys
 from .bank_statement_functions.calculations import json_to_excel,extraction_results
 from .bank_statement_functions.functions import get_desc_keys,straight_through
 from .bank_statement_functions import transaction_analysis
+from .bank_statement_functions.extracted_fields_df import jsonDict
 
 CORS(app)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -176,7 +177,8 @@ def credit_upload_document():
                 straight_flag=0
                 try:
                     error_response, textfield_list, extracted_data = extraction_results(response)
-                    # print(type(extracted_data))
+                    # df,extracted_data=jsonDict(extracted_data)
+                    # print(extracted_data)
                     print(basedir+"/static/data/input/Response.json")
                     with open (basedir+"/static/data/input/Response.json", 'w') as file:
                         file.write(json.dumps(eval(str(extracted_data)), indent=3))
@@ -371,13 +373,17 @@ def credit_graphs():
             debit_list = [{"name":k, "value":v} for k, v in debit_sum.to_dict()['Debit'].items()] 
             debit_count_list = [{"name":k, "value":v} for k, v in debit_count.to_dict()['Debit'].items()] 
             credit_count_list = [{"name":k, "value":v} for k, v in credit_count.to_dict()['Credit'].items()] 
-
             calculation_sheet=pd.read_excel(complete_file,sheet_name="Calculations")
+            calculation_sheet=calculation_sheet.fillna(0)
             card_values=dict(calculation_sheet.values)
             card_list = [{"name":k, "value":v} for k, v in card_values.items()] 
 
-            print(credit_sum,credit_count,debit_sum,debit_count)
-            return jsonify({'message':'Successful','data':{'Credit':credit_list,'Debit':debit_list,'Cards':card_list,'Transactions':[{"Debit":debit_count_list,"Credit":credit_count_list}]}}), 200
+            return jsonify({
+                'Credit':credit_list,
+                'Debit':debit_list,
+                'Cards':card_list,
+                'Transactions':[{"Debit":debit_count_list,"Credit":credit_count_list}]
+            }), 200
     except:
         print(traceback.print_exc())
         return jsonify({'message': 'Not successful!'}), 201

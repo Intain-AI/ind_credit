@@ -100,6 +100,9 @@ def extraction_results(data):
                     balance_list=[]
                     date_list=[]
                     date_error=[]
+                    all_rows_table=[]
+                    row_coordinates_list=[]
+
                     # row_list=[]
                     #finding header and renaming it.
                     if found_header==0 and found_table==0:
@@ -122,8 +125,6 @@ def extraction_results(data):
                         found_table=checkValidTable(column_index)
                         # Checking for Debit and Credit column Mix
                         # column_list = debit_credit_mix(column_list)
-                        all_rows_table=[]
-                        row_coordinates_list=[]
                         if found_table:
                             print("Validd table")
                             header_key=key
@@ -137,6 +138,7 @@ def extraction_results(data):
                     else:
                         start_index=0
                     if found_table:
+                        print("found_table")
                         for index in range(start_index,len(tables['rows'])):  
                             current_row_list=[]              
                             current_row=tables['rows'][index]
@@ -187,6 +189,8 @@ def extraction_results(data):
                 extraction_results["fields"]=True
             else:
                 extraction_results["fields"]=False
+            # if key=='Page_2':
+                # print(extraction_results)
             print("error date key"*4,error_date_key)
             data['result'][key]['extraction_results']=extraction_results
             data['result'][key]['error']={'isError':error_key,'error':{'header':error_header,'type':error_others_key,'balance':error_balance_key,'date':error_date_key}}    

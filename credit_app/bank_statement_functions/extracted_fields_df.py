@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+import re
 
 mixed_column = ['type','debit','debits','withdrawalamt.','dr','dr amount','withdrawal','withdrawal no','amount dr','withdrawal amt','withdrawal amount','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr', 'credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit amount','deposit cr','deposits in rs.','deposit amount inr']
 
@@ -77,7 +78,7 @@ def AddColumnMix(df, column_name_new, MatchingChar, column_name_actual):
             llist.append(re.sub(r'[^0-9,/.]', '', x[1][column_name_actual]))
             coordinates.append(x[1][column_name_actual + "_coordinates"])
         else:
-            llist.append(0)
+            llist.append('0')
             coordinates.append({})
     df[column_name_new] = llist
     df[column_name_new + "_coordinates"] = coordinates
@@ -92,7 +93,7 @@ def AddColumnNotMix(df, column_name_new, MatchingChar, column_name_actual,amount
             llist.append(x[1][amount_name])
             coordinates.append(x[1][amount_name+"_coordinates"])
         else:
-            llist.append(0)
+            llist.append('0')
             coordinates.append({})
     df[column_name_new] = llist
     df[column_name_new + "_coordinates"] = coordinates
