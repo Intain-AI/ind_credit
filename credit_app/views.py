@@ -177,8 +177,8 @@ def credit_upload_document():
                 straight_flag=0
                 try:
                     error_response, textfield_list, extracted_data = extraction_results(response)
-                    # df,extracted_data=jsonDict(extracted_data)
-                    # print(extracted_data)
+                    df,extracted_data,date_rows,balance_rows,correct=jsonDict(extracted_data)
+                    print(date_rows,balance_rows)
                     print(basedir+"/static/data/input/Response.json")
                     with open (basedir+"/static/data/input/Response.json", 'w') as file:
                         file.write(json.dumps(eval(str(extracted_data)), indent=3))
@@ -202,7 +202,8 @@ def credit_upload_document():
                         credit_db.insert_textfield(job_id,textfield_values)
 
                         # Straight Through Processing
-                        if straight_response==1:
+                        # if straight_response:
+                        if len(balance_rows)==0 and len(date_rows)==0 and correct:
                             straight_flag=1
                             data_ = {"job_id":job_details['job_id'], "response":extracted_data1}
                             auth_headers = request.headers.get('Authorization')

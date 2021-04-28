@@ -97,7 +97,7 @@ def ruleBasedNER(result,text_list):
     text=text.lower().replace('(cid:9)','').replace('\\n',' ')
     text=re.sub('[^a-zA-Z0-9/-]',' ',text)
     text=re.sub('\s+',' ',text)
-    print("\ntextttt\n",text)
+    # print("\ntextttt\n",text)
     Name = ['mr','ms','dear','mrs','name','holder']
     acc_no_list=['account no','account number','account summary','a/c']
     account_opening_date_list=['open date','account statement','transaction period','transaction date','period','between','from']
@@ -107,8 +107,8 @@ def ruleBasedNER(result,text_list):
     dict_bank={}
     for result_dict in result:
         dict_bank[result_dict['varname']]=result_dict['value']
-    print(dict_bank)
-    if dict_bank['account_holder_name'].lower()=='name' or dict_bank['account_holder_name'].lower()=='mr' or dict_bank['account_holder_name'].lower()=='mr.':
+    # print(dict_bank)
+    if dict_bank['account_holder_name'].lower()=='name' or dict_bank['account_holder_name'].lower()=='mr' or dict_bank['account_holder_name'].lower()=='mr.' or dict_bank['account_holder_name'].lower()=='mrs.' or dict_bank['account_holder_name'].lower()=='open':
         dict_bank['account_holder_name']='NA'
     if dict_bank['ac_open_date'].lower() in ['a/c','number','open','date','joint']:
         dict_bank['ac_open_date']='NA'
@@ -123,7 +123,7 @@ def ruleBasedNER(result,text_list):
         for acc_no_key in acc_no_list:
             z = re.search(acc_no_key, text)
             if z and dict_bank['account_number']=='NA':
-                print("acc no",z)
+                # print("acc no",z)
                 search_index=z.start()
                 acc_no=re.findall('[0-9]{10,17}',text[search_index:search_index+200])
                 if acc_no:
@@ -133,20 +133,20 @@ def ruleBasedNER(result,text_list):
         for element in account_opening_date_list:
             z = re.search(element, text)
             if z and dict_bank['ac_open_date']=='NA':
-                print("acc opening date",z)
+                # print("acc opening date",z)
                 search_index=z.start()
                 date_text=text[search_index:search_index+200]
                 month_list=re.findall(month_string,date_text)
-                print(date_text)
+                # print(date_text)
                 if dict_bank['ac_open_date']=='NA':
                     date_search=re.findall(date_regex,date_text)
                     if date_search:
-                        print("date regex",date_search)
+                        # print("date regex",date_search)
                         dict_bank['ac_open_date']=date_search[0]                      
                 if month_list and dict_bank['ac_open_date']=='NA':
                     for j in month_list:
                         if dict_bank['ac_open_date']=='NA' and j in words:
-                            print(j,month_list)
+                            # print(j,month_list)
                             dates=words[words.index(j)-1:words.index(j)+2]
                             # print(dates)
                             dict_bank['ac_open_date']=' '.join(dates)
@@ -161,7 +161,7 @@ def ruleBasedNER(result,text_list):
         for element in Name:
             z = re.search(element, text)
             if z and dict_bank['account_holder_name']=='NA':
-                print("account_holder_name",z)
+                # print("account_holder_name",z)
                 search_index=z.end()
                 person_name=''.join(text[search_index+1:search_index+15])
                 # month_list=re.findall(month_string,date_text)
@@ -177,10 +177,10 @@ def ruleBasedNER(result,text_list):
                 dict_bank['account_holder_name']=person_name.title()
         if word.lower()[:3] in months and dict_bank['ac_open_date']=='NA':
             date=words[index-1:index+2]
-            print("date final",date)
+            # print("date final",date)
             dict_bank['ac_open_date']=' '.join(date)
     if dict_bank['ac_open_date']=='NA':
-        print("date full text")
+        # print("date full text")
         date_search=re.findall(date_regex,text)
         if date_search:
             # print(date_search)

@@ -59,8 +59,10 @@ def validate_columns(row_list,column_index,error,credit_list,debit_list,balance_
 def checkValidTable(column_index):
     valid_table=0
     sum_not_present=sum(values==0 for values in column_index.values())
-    if sum_not_present <3:
+    print(sum_not_present)
+    if sum_not_present <=3:
         valid_table=1
+    print("valid table",valid_table)
     return valid_table
 
 def extraction_results(data):

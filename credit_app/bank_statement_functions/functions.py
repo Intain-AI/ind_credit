@@ -22,8 +22,8 @@ desc_dict={
     "Demand Draft":'dd/cc|dd',
     "UPI":'upi'}
 header_dict = {'Description': ['description','transaction description','account description','narration','naration','particular','particulars','transaction remarks','remarks','details','keterangan'],
-'Date':['date','bate','tran date','txn date','cid:9 txn date','txn. date','transaction date','post date','post dt','tanggal'],
-'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','withdrawal no','amount dr','withdrawal amt','withdrawal amount','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr'],
+'Date':['date','bate','tran date','txn date','transaction date & time','cid:9 txn date','txn. date','transaction date','post date','post dt','tanggal'],
+'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','withdrawal no','amount dr','withdrawal amt','withdrawal amount','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr','withdrawal s'],
 'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit amount','deposit cr','deposits in rs.','deposit amount inr'],
 'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance amount','balance inr','balance in rs.','balance amount inr','saldo']}
 combined_list=[]
@@ -76,8 +76,9 @@ def change_column_name(column_list):
     return new_col_list
 
 def preprocess_amount(amount):
-    if amount=='-' or amount=='':
+    if amount=='-' or amount=='' or amount=='--':
         amount='0.0'
+    amount = re.sub('cr.','',amount.lower()).strip()
     amount = re.sub('[^0-9.-]','',amount).strip()
     return(amount)
 
@@ -86,7 +87,12 @@ def preprocess_date(date_text):
     if date_text != "":
         date_text=date_text.replace('\\','')
         date_text = re.sub('([a-zA-Z]) ([a-zA-Z]) ?',r'\1\2', date_text)
-        # date_text=re.sub(r'\\','',date_text)
+        date_text=re.sub(r'\\','',date_text)
+        # print("before",date_text)
+        date_text= re.sub(r"(/)\s+(\d)",r'\1\2',date_text)
+        # print("after",date_text)
+        # date_text= re.sub("(/) +([\d])", r'\1\2',date_text);
+
     return(date_text)
 
 def transaction_type_description(description):
@@ -129,6 +135,7 @@ def straight_through(result):
             for table_list in page_list: 
                 # print(table_list)
                 if table_list['header']==1 or table_list['balance']==1 or table_list['date']==1 or table_list['reconcilation']==1:
+                # if table_list['date']==1:
                     return 0
         return 1
     except:
@@ -159,6 +166,8 @@ def add_blank_col(row_list,text,length,index):
         new_list={}
         if index==0:
             new_list[text]='Others'
+        elif text=='text':
+            new_list[text]='empty'+str(index)
         else:
             new_list[text]=''
         new_list['columnNo']=index
