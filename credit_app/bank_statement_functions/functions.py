@@ -25,7 +25,7 @@ header_dict = {'Description': ['description','transaction description','account 
 'Date':['date','bate','tran date','txn date','transaction date & time','cid:9 txn date','txn. date','transaction date','post date','post dt','tanggal'],
 'Debit':['debit','debits','withdrawalamt.','dr','dr amount','withdrawal','withdrawal no','amount dr','withdrawal amt','withdrawal amount','withdrawal amt.','withdrawals','withdrawal dr','withdrawal in rs.','withdrawal amount inr','withdrawal s'],
 'Credit': ['credit','credits','depositamt.','deposit amt.','cr amount','cr','deposit','amount cr','credit amt','deposits','deposit amount','deposit cr','deposits in rs.','deposit amount inr'],
-'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance amount','balance inr','balance in rs.','balance amount inr','saldo']}
+'Balance':['closingbalance','balance','closing balance','running balance','balace','closing bal','balance amt','balance amount','balance inr','balance in rs.','balance amount inr','saldo','balance rs.']}
 combined_list=[]
 desc_remove=['brought forward','carried forward','closing balance','transaction total']
 for key in header_dict:

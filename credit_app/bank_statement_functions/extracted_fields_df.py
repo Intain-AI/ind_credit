@@ -152,14 +152,16 @@ def remove_unwanted(df):
     return(df)
 
 def is_reversed(df):
+    is_reverse=0
     error_balance_rows=balance_check(df)
     if len(error_balance_rows)>int(len(df)/2):
         df1=df.iloc[::-1].reset_index(drop=True)
         error_balance_rows_reverse=balance_check(df1)
         if len(error_balance_rows)>len(error_balance_rows_reverse):
             print("reverse date")
-            return df1,error_balance_rows_reverse
-    return df,error_balance_rows
+            is_reverse=1
+            return df1,error_balance_rows_reverse,is_reverse
+    return df,error_balance_rows,is_reverse
 
 def balance_check(df):
     error_balance_rows=[]
@@ -186,35 +188,41 @@ def string_convert(df):
     return df
 
 def jsonDict(data):
-    correct=1
-    df, real_columns = extractedDataToDf(data)
-    print(real_columns)
-    df=remove_unwanted(df)
-    wrong_date_index_list=[]
     try:
-        df,wrong_date_index_list=correct_date_df(df)
-    except:
-        correct=0
-    if not('Balance' in real_columns and 'Debit' in real_columns and 'Credit' in real_columns):
-        print("fixing columns")
-        df = fixCrDrMixMain(real_columns, df)
-    error_rows=[]
-    if 'Balance' in real_columns and 'Credit' in real_columns and 'Debit' in real_columns:
-        if len(df['Credit'])!=len(df['Debit']) and len(df['Credit'])!=len(df['Balance']) and len(df['Debit'])!=len(df['Balance']):
-            print("Length Match Error\n")
+        correct=1
+        reverse=0
+        df, real_columns = extractedDataToDf(data)
+        print(real_columns)
+        df=remove_unwanted(df)
+        wrong_date_index_list=[]
+        try:
+            df,wrong_date_index_list=correct_date_df(df)
+        except:
+            correct=0
+        if not('Balance' in real_columns and 'Debit' in real_columns and 'Credit' in real_columns):
+            print("fixing columns")
+            df = fixCrDrMixMain(real_columns, df)
+        error_rows=[]
+        print("real_columns",real_columns)
+        new_column_list=list(df.columns)
+        print(new_column_list)
+        if 'Balance' in new_column_list and 'Credit' in new_column_list and 'Debit' in new_column_list:
+            if len(df['Credit'])!=len(df['Debit']) and len(df['Credit'])!=len(df['Balance']) and len(df['Debit'])!=len(df['Balance']):
+                print("Length Match Error\n")
+            else:
+                print("checking balance")
+                df['Balance']=cleanSeries(df['Balance'])
+                df['Credit']=cleanSeries(df['Credit'])
+                df['Debit']=cleanSeries(df['Debit'])
+                df,error_rows,reverse=is_reversed(df)
+                df=string_convert(df)
         else:
-            print("checking balance")
-            df['Balance']=cleanSeries(df['Balance'])
-            df['Credit']=cleanSeries(df['Credit'])
-            df['Debit']=cleanSeries(df['Debit'])
-            df,error_rows=is_reversed(df)
-            df=string_convert(df)
-    else:
-        correct=0
-    df=df.fillna("")
-    df, final_json = dfToDict(df, data)
-    return df,final_json,wrong_date_index_list,error_rows,correct
-
+            correct=0
+        df=df.fillna("")
+        df, final_json = dfToDict(df, data)
+        return df,final_json,wrong_date_index_list,error_rows,correct,reverse
+    except:
+        return [],data,[],[],0,0
 def fixCrDrMixMain(real_columns, df):
     # Check if column is mixed or not
     isMixed = check_DrCrMix(df, real_columns)
@@ -267,6 +275,8 @@ def dfToDict(df, old_dict):
                                 one_row.append(cell)
                     table_wise.append(one_row)
             old_dict["result"]["Page_" + str(pg)]["extraction_results"]["tabledata"][table_no]["data"] = table_wise
+            old_dict["result"]["Page_" + str(pg)]["extraction_results"]["tabledata"][table_no]["columns"] = all_columns
+
     return df, old_dict
 
 # df, dick = dfToDict(df, data)

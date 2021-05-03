@@ -131,7 +131,7 @@ def digitize_document(request_email,job_id):
     
     if job_response:  
         mongo_db_client.close()
-        return (job_response['folder_path'],job_response['excel_file_path'])
+        return (job_response['folder_path'],job_response['excel_file_path'],job_response['reversed'])
     else:
         mongo_db_client.close()
         return -2
@@ -196,9 +196,9 @@ def get_jobid(request_email):
 #         return -2
 
 ########################################################################################################################
-def update_job_details(excel_file_path,response,job_id,message):
+def update_job_details(excel_file_path,response,job_id,message,is_reversed):
     try:
-        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status':message,'excel_file_path':excel_file_path,'response':response}})
+        collection_job.update_one({'job_id': job_id}, {"$set":{'job_status':message,'excel_file_path':excel_file_path,'response':response,'reversed':is_reversed}})
         mongo_db_client.close()
         return 
     except:

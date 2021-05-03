@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 import os,json,traceback
 from .response import textfield_list
-from .Named_Entity_Recognition.NER_Extractor import nerMain
+from .Named_Entity_Recognition.NER_Extractor_new import nerMain
 from .functions import change_column_name,preprocess_amount,preprocess_date,transaction_type_description,correct_date,get_blank_coordinates,add_blank_col,balance_column_check,validate_column_header,add_dictionary,debit_credit_mix
 
 mandatory_columns=['Date','Description','Credit','Debit','Balance']
@@ -205,34 +205,32 @@ def extraction_results(data):
 
 def json_to_excel(response):
     data = response.copy()
-    # excel_file_path =  os.getcwd()+'/credit_app'+ excel_file_path
-    # with open(response, "r") as json_file:
-    #     data=json.load(json_file)
     df_list_new = []
+    column_list=[]
     extracted_fields =data['result']['header_fields']
     for key,value in data['result'].items():
         tabledata=[]
         if 'extraction_results' in value:
             try:
                 extracted_details=data['result'][key]['extraction_results']['tabledata']
-                column_list=extracted_details[0]['columns']
-                column_list = [re.sub('\s+', ' ',x) for x in column_list]
-                df=pd.DataFrame()
-                for rows in extracted_details[0]['data']:
-                    row_list=[]
-                    for row in rows:
-                        row_list.append(row['word'])
-                    # print('row_list',row_list,len(row_list))
-                    df=df.append([row_list])
-            
-                df.reset_index(drop=True,inplace=True)
-                df.columns=column_list 
-                # df.to_excel('SSSSSSS.xlsx')
-                def trim(x):
-                    if x.dtype == object: x = x.str.strip().replace('\s+', ' ',regex=True)
-                    return(x)
-                df = df.apply(trim)
-                df_list_new.append(df)
+                for tables in extracted_details:
+                    df=pd.DataFrame()
+                    for table in tables['data']:
+                        if len(column_list)==0 and len(table)!=0:
+                            column_list=extracted_details[0]['columns']
+                            column_list = [re.sub('\s+', ' ',x) for x in column_list]
+                        row_list=[]
+                        for rows in table:
+                            row_list.append(rows['word'])
+                        df=df.append([row_list])            
+                    df.reset_index(drop=True,inplace=True)
+                    df.columns=column_list 
+                        # df.to_excel('SSSSSSS.xlsx')
+                    def trim(x):
+                        if x.dtype == object: x = x.str.strip().replace('\s+', ' ',regex=True)
+                        return(x)
+                    df = df.apply(trim)
+                    df_list_new.append(df)
             except:
                 print(traceback.print_exc())
                 pass
