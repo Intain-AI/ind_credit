@@ -43,6 +43,7 @@ def nerOutput(word,tag,sentences,text_list):
               
                if(tag[i]=="B_ACC_NUMBER"):
                    if(word[i].isdigit()):
+                       print("acc no",coordinates)
                        result=assign_value(IOB_tags,classes,label,tag,i,id,logical_id,coordinates,word[i])
                        idd=idd+1
                        result['order_id']=idd
@@ -93,6 +94,8 @@ def nerOutput(word,tag,sentences,text_list):
                    result['value']='NA'
                    result["varname"]=classes[ind]
                    result["coordinates"]={"top":10,"left":10,"width":10,"height":10}
+                   result['confidence_score']=100
+                   result['confidence_score_green']=85
                    idd=idd+1
                    result['order_id']=idd
                    res.append(result)
@@ -247,6 +250,7 @@ def nerMain(data):
         word,tag=predict_input(tokens)
         # print(word,tag)
         result=nerOutput(word,tag,sentences,text_list)
+        # print("neroutput",result)
         dict_bank={}
         for result_dict in result:
             dict_bank[result_dict['varname']]=result_dict['value']
@@ -260,10 +264,10 @@ def nerMain(data):
 
 if __name__=="__main__":
     # f = open('/home/credit/ind_credit/credit_app/static/data/input/bank_statement_2/E-HDFC_67/E-HDFC_67.json')
-    df=pd.DataFrame()
+    # df=pd.DataFrame()
     json_dir="/home/credit/JSON_files/"
     for file in os.listdir(json_dir):
-    # file="bob_pre1.pdf.json"
+    # file="E-SBI_88.pdf.json"
         print(file)
         f = open(json_dir+file) 
         json_data = json.load(f) 
@@ -271,13 +275,13 @@ if __name__=="__main__":
         # word,tag=predict_input(tokens)
         # result=output(word,tag,sentences,text_list,text_list)
         result = nerMain(json_data)
-        print(result)
-        dict_bank={}
-        for result_dict in result:
-            dict_bank[result_dict['varname']]=result_dict['value']
-            dict_bank['file_name']=file
+        print("\n\n",result)
+        # dict_bank={}
+        # for result_dict in result:
+        #     dict_bank[result_dict['varname']]=result_dict['value']
+        #     dict_bank['file_name']=file
         # print(dict_bank)
-        df=df.append(dict_bank,ignore_index=True)
-        # print(df)
-    df.to_excel("NER_resp.xlsx")
-    # print(resp)
+        #     df=df.append(dict_bank,ignore_index=True)
+        #     # print(df)
+        # df.to_excel("NER_resp.xlsx")
+        # print(resp)

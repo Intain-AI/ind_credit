@@ -116,21 +116,23 @@ def find_coordinates(sentences,text_list,word):
 def rule_based_coordinates(result,dict_bank,sentences,text_list,data):
     for result_dict in result:
         result_dict['value']=dict_bank[result_dict['varname']]
+        print(result_dict)
         val=dict_bank[result_dict['varname']]
         if(val!='NA'):
             if(result_dict['varname']!='account_holder_name' and result_dict['varname']!='joint_holders'):
                 id,logical_id,coordinates=find_coordinates(sentences,text_list,result_dict['value'])
+                # print("here",coordinates)
                 if(coordinates=={}):
-                    result_dict['coordinates']={"top":10,"left":10,"width":10,"height":10}
-                
+                    coordinates={"top":10,"left":10,"width":10,"height":10}
+                result_dict['coordinates']=coordinates
                 #Finding coordinates for account open date
                 if(coordinates=={} and result_dict['varname']=='ac_open_date'):
                     date=result_dict['value']
                     coordinates=date_coordinates(date,sentences)
-                    print(coordinates)
+                    # print("acc opening date",coordinates)
                 result_dict['coordinates']=coordinates
                 #print(coordinates)
-            if(result_dict['varname']=='joint_holders'):
+            elif(result_dict['varname']=='joint_holders'):
                 result_dict['value']=dict_bank[result_dict['varname']]
                 value=result_dict['value'].split(" ")[0]
                 id,logical_id,coordinates=account_type_coordinates(sentences,text_list,value)
@@ -141,7 +143,7 @@ def rule_based_coordinates(result,dict_bank,sentences,text_list,data):
                     #print("joint")
                     result_dict['coordinates']=coordinates
             #Finding coordinates for account holder name
-            if(result_dict['varname']=='account_holder_name'):
+            elif(result_dict['varname']=='account_holder_name'):
                 person_name=dict_bank[result_dict['varname']]
                 #print("person",person_name)
                 coordinates,coordinates_list=account_holder_coordinates(person_name,data)
@@ -152,4 +154,6 @@ def rule_based_coordinates(result,dict_bank,sentences,text_list,data):
                     result_dict['coordinates']=coordinates
         else:
             result_dict['coordinates']={"top":10,"left":10,"width":10,"height":10}
+        # print("result_dict\n",result_dict)
+    # print("result",result)
     return(result)
