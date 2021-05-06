@@ -178,15 +178,18 @@ def credit_upload_document():
                 is_reverse=0
                 try:
                     error_response, textfield_list, extracted_data = extraction_results(response)
-                    df,extracted_data,date_rows,balance_rows,correct,is_reverse=jsonDict(extracted_data)
+                    df,extracted_data1,date_rows,balance_rows,correct,is_reverse=jsonDict(extracted_data)
                     print(date_rows,balance_rows,correct)
                     print(basedir+"/static/data/input/Response.json")
-                    with open (basedir+"/static/data/input/Response.json", 'w') as file:
+                    with open (basedir+"/static/data/input/Response_extracted.json", 'w') as file:
                         file.write(json.dumps(eval(str(extracted_data)), indent=3))
+                    extracted_data = json.load(open (basedir+"/static/data/input/Response_extracted.json"))
+                    with open (basedir+"/static/data/input/Response.json", 'w') as file:
+                        file.write(json.dumps(eval(str(extracted_data1)), indent=3))
                     extracted_data1 = json.load(open (basedir+"/static/data/input/Response.json"))
 
                     # extracted_data=json.dumps(eval(str(extracted_data)),indent=3)
-                    add_record_status = credit_db.addRecord_Db(extracted_data1,job_id,emailid)
+                    add_record_status = credit_db.addRecord_Db(extracted_data,extracted_data1,job_id,emailid)
                     if add_record_status == -2:
                         credit_db.update_job_details(excel_file_path,error_response,job_id,"Failed",is_reverse)
                         credit_db.insert_textfield(job_id,{})
@@ -230,6 +233,9 @@ def credit_upload_document():
 
                     return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id':job_id}), 400
             else:
+                print("No response")
+                print(traceback.print_exc())       
+                excel_file_path="NA"
                 credit_db.insert_textfield(job_id,{})
                 return jsonify({'message': 'Upload Not successful!','straight_through':0,'job_id': job_id}), 400
         except Exception as e: 

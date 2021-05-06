@@ -264,7 +264,7 @@ def update_jobstatus(request_email, request_jobid, request_status):
         return -2
 
 
-def addRecord_Db(file_json,job_id,email_id):
+def addRecord_Db(file_json,file_json1,job_id,email_id):
     '''
     Input
     job_id >> Int
@@ -287,7 +287,7 @@ def addRecord_Db(file_json,job_id,email_id):
         query['upload_dateTime'] = now_asia.strftime(date_format)
         
         collection_extracted.update_one(query,{'$set':{"data":file_json}},upsert=True)
-        collection_validated.update_one(query,{'$set':{"data":file_json}},upsert=True)
+        collection_validated.update_one(query,{'$set':{"data":file_json1}},upsert=True)
         mongo_db_client.close()
         return 0
     except:
